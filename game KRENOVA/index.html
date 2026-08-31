@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Eco-Rangers 8-Bit</title>
+    <!-- Menghubungkan Google Font bergaya Retro 8-Bit -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Menghubungkan file CSS eksternal -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Menghubungkan manifest untuk PWA -->
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+<body>
+
+    <!-- Kontainer Utama Layar Game -->
+    <div id="game-container">
+        
+        <!-- Header / Status Bar Retro -->
+        <div id="header-bar">
+            <span>HP: <span id="player-hp">100</span></span>
+            <span>LEVEL: <span id="player-lvl">1</span></span>
+        </div>
+
+       <!-- Layar Utama / Tampilan Radar atau Kamera -->
+        <div id="screen-view">
+            <!-- Ini tag kamera yang baru ditambahkan -->
+            <video id="camera-feed" autoplay playsinline></video>
+            
+            <!-- TAMBAHAN FASE 2: Wadah transparan untuk monster 2D -->
+            <div id="phaser-game"></div>
+            <div class="scanline-overlay"></div>
+            <div id="pixel-text">
+                <h1>ECO-RANGERS</h1>
+                <p class="blink">PRESS START</p>
+            </div>
+        </div>
+
+        <!-- Tombol Aksi Bawah -->
+        <div id="control-panel">
+            <button id="btn-start" class="retro-btn">MULAI BERBURU</button>
+        </div>
+
+    </div>
+
+    <!-- Menghubungkan file JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
