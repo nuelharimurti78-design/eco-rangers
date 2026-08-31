@@ -38,26 +38,29 @@ const config = {
 const game = new Phaser.Game(config);
 let dummyMonster;
 
-// FUNGSI BARU: Memuat aset sebelum game tampil
+// ==========================================
+// FUNGSI PHASER: VERSI FOTO SENDIRI
+// ==========================================
 function preloadGame() {
-    // Meminjam gambar Slime dari server resmi yang dijamin aktif
-    this.load.image('monster.png'); 
+    // Memanggil file monster.png dari folder yang sama
+    this.load.image('pet', 'monster.png');
 }
 
-
-// MENGEDIT FUNGSI CREATE: Menampilkan gambar
 function createGame() {
-    // Menampilkan gambar 'pet' di koordinat tengah
-    dummyMonster = this.add.image(150, 200, 'monster.png');
-    
-    // Opsional: Kalau gambarmu kekecilan, hilangkan tanda // di bawah ini untuk memperbesar
-    // dummyMonster.setScale(2); 
+    this.children.removeAll();
 
-    // Animasi napas tetap kita pakai biar gambarnya terasa hidup!
+    // Spawn foto monster kamu di tengah
+    dummyMonster = this.add.image(150, 200, 'pet');
+    
+    // Sesuaikan skalanya. Kalau fotonya kegedean, kecilin angkanya (misal 0.5)
+    // Kalau kekecilan, gedein angkanya (misal 2 atau 3). Coba tes pakai 1 dulu.
+    dummyMonster.setScale(1);
+
+    // Animasi napas (tetap kita pasang biar hidup)
     this.tweens.add({
         targets: dummyMonster,
-        scaleX: 1.1, // Bergerak membesar sedikit
-        scaleY: 0.9, // Bergerak mengecil sedikit
+        scaleX: '*=1.1', // Membesar 10% dari skala asli
+        scaleY: '*=0.9', // Mengecil 10% dari skala asli
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
