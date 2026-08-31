@@ -41,14 +41,14 @@ let dummyMonster;
 // FUNGSI BARU: Memuat aset sebelum game tampil
 function preloadGame() {
     // Meminjam gambar Slime dari server resmi yang dijamin aktif
-    this.load.image('pet', 'https://labs.phaser.io/assets/sprites/slime.png'); 
+    this.load.image('monster.png'); 
 }
 
 
 // MENGEDIT FUNGSI CREATE: Menampilkan gambar
 function createGame() {
     // Menampilkan gambar 'pet' di koordinat tengah
-    dummyMonster = this.add.image(150, 200, 'pet');
+    dummyMonster = this.add.image(150, 200, 'monster.png');
     
     // Opsional: Kalau gambarmu kekecilan, hilangkan tanda // di bawah ini untuk memperbesar
     // dummyMonster.setScale(2); 
