@@ -70,18 +70,18 @@ function createGame() {
 
 function createGame() {
     // Membuat Kotak Hijau sebagai monster sementara
-    dummyMonster = this.add.rectangle(150, 200, 50, 50, 0x33ff66);
+    // dummyMonster = this.add.rectangle(150, 200, 50, 50, 0x33ff66);
     
     // Memberikan animasi denyut/napas
-    this.tweens.add({
-        targets: dummyMonster,
-        scaleX: 1.2,
-        scaleY: 0.8,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-        duration: 800
-    });
+    // this.tweens.add({
+        // targets: dummyMonster,
+        // scaleX: 1.2,
+        // scaleY: 0.8,
+        // yoyo: true,
+        // repeat: -1,
+        // ease: 'Sine.easeInOut',
+        // duration: 800
+    // });
 }
 
 // ==========================================
