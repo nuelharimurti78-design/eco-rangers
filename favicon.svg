@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="#0a1914"/>
+  <rect x="6" y="6" width="88" height="88" rx="16" fill="none" stroke="#00ff9d" stroke-width="3"/>
+  <!-- Leaf sprout -->
+  <path d="M50 35 C42 20 58 15 54 28" fill="#76ff03"/>
+  <circle cx="50" cy="55" r="24" fill="#00e676"/>
+  <!-- Eyes -->
+  <circle cx="42" cy="52" r="3.5" fill="#0a1914"/>
+  <circle cx="58" cy="52" r="3.5" fill="#0a1914"/>
+  <circle cx="43" cy="51" r="1" fill="#ffffff"/>
+  <circle cx="59" cy="51" r="1" fill="#ffffff"/>
+  <!-- Blush -->
+  <ellipse cx="37" cy="58" rx="3" ry="1.5" fill="#ff69b4" opacity="0.8"/>
+  <ellipse cx="63" cy="58" rx="3" ry="1.5" fill="#ff69b4" opacity="0.8"/>
+  <!-- Smile -->
+  <path d="M47 59 Q50 62 53 59" fill="none" stroke="#0a1914" stroke-width="1.8" stroke-linecap="round"/>
+</svg>
