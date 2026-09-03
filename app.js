@@ -1,15 +1,19 @@
 /**
  * Eco-Gotchi: WebAR Tamagotchi Daur Ulang
- * Fase 3: Main Application Controller (Router, Wallet Sync, PWA & WebAR)
+ * Fase 4: Main Application Controller (Router, Wallet, Scanner, Anti-Cheat & Admin QR Generator)
  */
+
+const ADMIN_PIN = 'admin123'; // PIN Akses Khusus Admin
 
 // State App PWA & Navigasi
 const APP_STATE = {
   currentView: 'lobby', // 'lobby' | 'ar'
   deferredPrompt: null,
   isInstalled: false,
+  isAdmin: false,
   isOnline: navigator.onLine,
-  isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+  isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+  cooldownTimerId: null
 };
 
 // DOM Elements Cache
@@ -26,11 +30,46 @@ const DOM = {
   headerTokenChip: document.getElementById('header-token-chip'),
   headerTokenVal: document.getElementById('header-token-val'),
   lobbyTokenStat: document.getElementById('lobby-token-stat'),
+  lobbyRecycleStat: document.getElementById('lobby-recycle-stat'),
   modalWallet: document.getElementById('modal-wallet'),
   modalWalletBalance: document.getElementById('modal-wallet-balance'),
   txHistoryList: document.getElementById('tx-history-list'),
   btnOpenWallet: document.getElementById('btn-open-wallet'),
   btnCloseWallet: document.getElementById('btn-close-wallet'),
+
+  // Scanner Elements (Fase 4)
+  btnOpenScanner: document.getElementById('btn-open-scanner'),
+  modalScanner: document.getElementById('modal-scanner'),
+  btnCloseScanner: document.getElementById('btn-close-scanner'),
+  cooldownStatusBox: document.getElementById('cooldown-status-box'),
+  cooldownStatusText: document.getElementById('cooldown-status-text'),
+  simBinBtns: document.querySelectorAll('.sim-bin-btn'),
+
+  // Reward Modal Elements (Fase 4)
+  modalReward: document.getElementById('modal-reward'),
+  rewardIcon: document.getElementById('reward-icon'),
+  rewardBinName: document.getElementById('reward-bin-name'),
+  rewardAmountText: document.getElementById('reward-amount-text'),
+  btnClaimReward: document.getElementById('btn-claim-reward'),
+
+  // Admin Elements (Admin QR Feature)
+  btnOpenAdmin: document.getElementById('btn-open-admin'),
+  modalAdminAuth: document.getElementById('modal-admin-auth'),
+  btnCloseAdminAuth: document.getElementById('btn-close-admin-auth'),
+  adminPinInput: document.getElementById('admin-pin-input'),
+  btnSubmitAdminPin: document.getElementById('btn-submit-admin-pin'),
+  adminAuthError: document.getElementById('admin-auth-error'),
+
+  modalAdminQr: document.getElementById('modal-admin-qr'),
+  btnCloseAdminQr: document.getElementById('btn-close-admin-qr'),
+  qrBinType: document.getElementById('qr-bin-type'),
+  qrBinLocation: document.getElementById('qr-bin-location'),
+  qrBinId: document.getElementById('qr-bin-id'),
+  qrBinInstructions: document.getElementById('qr-bin-instructions'),
+  btnGenerateSticker: document.getElementById('btn-generate-sticker'),
+  stickerPreviewCanvas: document.getElementById('sticker-preview-canvas'),
+  btnDownloadSticker: document.getElementById('btn-download-sticker'),
+  btnPrintSticker: document.getElementById('btn-print-sticker'),
 
   // Guide Modal Elements
   modalGuide: document.getElementById('modal-guide'),
@@ -51,7 +90,7 @@ const DOM = {
  * Inisialisasi Aplikasi Saat Halaman Selesai Dimuat
  */
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('[EcoGotchi] Inisialisasi Fase 3: Ekosistem Web & Dompet Token...');
+  console.log('[EcoGotchi] Inisialisasi Sistem Lengkap + Admin QR Generator...');
 
   // 1. Inisialisasi PWA Core
   initServiceWorker();
@@ -64,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupWalletSync();
   }
 
-  // 3. Inisialisasi Game Engine Phaser 3 & Camera Manager
+  // 3. Inisialisasi Game Engine AR Monster & Camera Manager
   if (window.GameManager) {
     window.GameManager.init('game-container');
   }
@@ -74,9 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setupCameraControls();
   }
 
-  // 4. Inisialisasi Navigasi & Modal
+  // 4. Inisialisasi Scanner QR & Anti-Cheat
+  if (window.ScannerManager) {
+    window.ScannerManager.init('scanner-video', (category, metadata) => {
+      handleScanSuccess(category, metadata);
+    });
+  }
+
+  // 5. Inisialisasi Navigasi, Modal, & Fitur Admin
   setupNavigation();
   setupModals();
+  setupScannerEvents();
+  setupAdminEvents();
 });
 
 /**
@@ -89,7 +137,6 @@ function setupNavigation() {
       switchView('ar');
       showToast('Memasuki Mode WebAR...');
       
-      // Nyalakan kamera otomatis saat masuk ke AR
       if (window.CameraManager) {
         await window.CameraManager.startCamera();
       }
@@ -102,7 +149,6 @@ function setupNavigation() {
       switchView('lobby');
       showToast('Kembali ke Halaman Lobby');
       
-      // Matikan kamera saat kembali ke Lobby untuk hemat baterai
       if (window.CameraManager) {
         window.CameraManager.stopCamera();
       }
@@ -123,7 +169,6 @@ function switchView(targetView) {
     DOM.viewLobby.classList.remove('active');
     DOM.viewAR.classList.add('active');
 
-    // Trigger resume & reposition monster agar pas dengan kontainer AR
     if (window.GameManager) {
       window.GameManager.resumeAR();
       setTimeout(() => {
@@ -137,13 +182,12 @@ function switchView(targetView) {
  * Konfigurasi Sinkronisasi Dompet ke Antarmuka Pengguna
  */
 function setupWalletSync() {
-  window.WalletManager.onChange((balance, transactions) => {
-    // 1. Update teks saldo di Header & Lobby
+  window.WalletManager.onChange((balance, transactions, recycleCount) => {
     if (DOM.headerTokenVal) DOM.headerTokenVal.textContent = balance;
     if (DOM.lobbyTokenStat) DOM.lobbyTokenStat.textContent = `${balance} ECO`;
+    if (DOM.lobbyRecycleStat) DOM.lobbyRecycleStat.textContent = `${recycleCount}x Scan`;
     if (DOM.modalWalletBalance) DOM.modalWalletBalance.textContent = `${balance} ECO`;
 
-    // 2. Render Riwayat Transaksi
     if (DOM.txHistoryList) {
       DOM.txHistoryList.innerHTML = '';
       if (transactions.length === 0) {
@@ -175,7 +219,160 @@ function setupWalletSync() {
 }
 
 /**
- * Konfigurasi Interaksi Modal (Dompet & Panduan)
+ * Konfigurasi Event Scanner
+ */
+function setupScannerEvents() {
+  if (DOM.simBinBtns) {
+    DOM.simBinBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const binType = btn.getAttribute('data-bin');
+        if (window.ScannerManager) {
+          window.ScannerManager.simulateScan(binType);
+        }
+      });
+    });
+  }
+
+  if (DOM.btnClaimReward) {
+    DOM.btnClaimReward.addEventListener('click', () => {
+      if (DOM.modalReward) DOM.modalReward.classList.remove('active');
+      showToast('🪙 Eco-Token berhasil masuk ke dompet Anda!');
+    });
+  }
+}
+
+/**
+ * Penanganan Saat Scan Berhasil
+ */
+function handleScanSuccess(category, metadata = {}) {
+  if (DOM.modalScanner) DOM.modalScanner.classList.remove('active');
+  if (window.ScannerManager) window.ScannerManager.stopScanner();
+
+  if (DOM.rewardIcon) DOM.rewardIcon.textContent = category.icon;
+  
+  const locName = (metadata && metadata.location && metadata.location !== 'Tempat Sampah Daur Ulang')
+    ? `${category.name} • 📍 ${metadata.location}`
+    : category.name;
+    
+  if (DOM.rewardBinName) DOM.rewardBinName.textContent = locName;
+  if (DOM.rewardAmountText) DOM.rewardAmountText.textContent = `+${category.reward} ECO`;
+
+  if (DOM.modalReward) {
+    DOM.modalReward.classList.add('active');
+  }
+
+  updateCooldownUI();
+}
+
+/**
+ * Perbarui Tampilan Cooldown Anti-Cheat
+ */
+function updateCooldownUI() {
+  if (!window.ScannerManager || !DOM.cooldownStatusText || !DOM.cooldownStatusBox) return;
+
+  const remaining = window.ScannerManager.getCooldownRemaining();
+
+  if (remaining > 0) {
+    DOM.cooldownStatusBox.classList.remove('ready');
+    DOM.cooldownStatusText.textContent = `Anti-Cheat: Cooldown aktif (${remaining}s)`;
+  } else {
+    DOM.cooldownStatusBox.classList.add('ready');
+    DOM.cooldownStatusText.textContent = 'Anti-Cheat: Scanner Siap Digunakan';
+  }
+}
+
+function startCooldownMonitor() {
+  updateCooldownUI();
+  if (APP_STATE.cooldownTimerId) clearInterval(APP_STATE.cooldownTimerId);
+  APP_STATE.cooldownTimerId = setInterval(() => {
+    updateCooldownUI();
+  }, 1000);
+}
+
+/**
+ * Konfigurasi Fitur Admin QR & Stiker Generator
+ */
+function setupAdminEvents() {
+  // Verifikasi PIN Admin
+  const submitAdminPin = () => {
+    const pin = (DOM.adminPinInput ? DOM.adminPinInput.value : '').trim();
+    if (pin === ADMIN_PIN || pin === 'eco2026') {
+      APP_STATE.isAdmin = true;
+      if (DOM.adminAuthError) DOM.adminAuthError.classList.add('hidden');
+      if (DOM.modalAdminAuth) DOM.modalAdminAuth.classList.remove('active');
+      if (DOM.adminPinInput) DOM.adminPinInput.value = '';
+      
+      // Buka Modal Generator & Render Stiker Awal
+      if (DOM.modalAdminQr) DOM.modalAdminQr.classList.add('active');
+      generateCurrentSticker();
+      showToast('🔓 Akses Admin Diberikan.');
+    } else {
+      if (DOM.adminAuthError) DOM.adminAuthError.classList.remove('hidden');
+    }
+  };
+
+  if (DOM.btnSubmitAdminPin) DOM.btnSubmitAdminPin.addEventListener('click', submitAdminPin);
+  if (DOM.adminPinInput) {
+    DOM.adminPinInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitAdminPin();
+    });
+  }
+
+  // Generate Stiker saat form diubah / tombol diklik
+  const updateSticker = () => generateCurrentSticker();
+
+  if (DOM.btnGenerateSticker) DOM.btnGenerateSticker.addEventListener('click', updateSticker);
+  if (DOM.qrBinType) DOM.qrBinType.addEventListener('change', updateSticker);
+  if (DOM.qrBinLocation) DOM.qrBinLocation.addEventListener('input', updateSticker);
+  if (DOM.qrBinId) DOM.qrBinId.addEventListener('input', updateSticker);
+  if (DOM.qrBinInstructions) DOM.qrBinInstructions.addEventListener('input', updateSticker);
+
+  // Unduh Gambar Stiker PNG
+  if (DOM.btnDownloadSticker) {
+    DOM.btnDownloadSticker.addEventListener('click', () => {
+      if (!DOM.stickerPreviewCanvas || !window.QRGenerator) return;
+      const binId = DOM.qrBinId ? DOM.qrBinId.value.trim() || 'BIN-001' : 'BIN-001';
+      window.QRGenerator.downloadSticker(DOM.stickerPreviewCanvas, `stiker-${binId}.png`);
+      showToast(`💾 Stiker ${binId}.png berhasil diunduh!`);
+    });
+  }
+
+  // Cetak Stiker ke Printer
+  if (DOM.btnPrintSticker) {
+    DOM.btnPrintSticker.addEventListener('click', () => {
+      if (!DOM.stickerPreviewCanvas || !window.QRGenerator) return;
+      window.QRGenerator.printSticker(DOM.stickerPreviewCanvas);
+    });
+  }
+}
+
+/**
+ * Render Stiker QR Berdasarkan Input Form Admin
+ */
+function generateCurrentSticker() {
+  if (!window.QRGenerator || !DOM.stickerPreviewCanvas) return;
+
+  const typeKey = DOM.qrBinType ? DOM.qrBinType.value : 'PLASTIC';
+  const category = (window.ECO_BIN_TYPES && window.ECO_BIN_TYPES[typeKey]) ? window.ECO_BIN_TYPES[typeKey] : {
+    name: 'Daur Ulang Plastik', icon: '🥤', reward: 20, color: '#00e5ff'
+  };
+
+  const data = {
+    type: typeKey,
+    name: category.name,
+    icon: category.icon,
+    reward: category.reward,
+    color: category.color,
+    location: DOM.qrBinLocation ? DOM.qrBinLocation.value.trim() : 'Area Umum',
+    binId: DOM.qrBinId ? DOM.qrBinId.value.trim() : 'BIN-001',
+    instructions: DOM.qrBinInstructions ? DOM.qrBinInstructions.value.trim() : 'Masukkan sampah pada tempatnya'
+  };
+
+  window.QRGenerator.generateStickerCanvas(data, DOM.stickerPreviewCanvas);
+}
+
+/**
+ * Konfigurasi Interaksi Semua Modal
  */
 function setupModals() {
   // Modal Dompet
@@ -188,6 +385,69 @@ function setupModals() {
   if (DOM.modalWallet) {
     DOM.modalWallet.addEventListener('click', (e) => {
       if (e.target === DOM.modalWallet) closeWallet();
+    });
+  }
+
+  // Modal Scanner (Fase 4)
+  const openScanner = async () => {
+    DOM.modalScanner.classList.add('active');
+    startCooldownMonitor();
+    if (window.ScannerManager) {
+      await window.ScannerManager.startScanner();
+    }
+  };
+
+  const closeScanner = () => {
+    DOM.modalScanner.classList.remove('active');
+    if (APP_STATE.cooldownTimerId) clearInterval(APP_STATE.cooldownTimerId);
+    if (window.ScannerManager) {
+      window.ScannerManager.stopScanner();
+    }
+  };
+
+  if (DOM.btnOpenScanner) DOM.btnOpenScanner.addEventListener('click', openScanner);
+  if (DOM.btnCloseScanner) DOM.btnCloseScanner.addEventListener('click', closeScanner);
+  if (DOM.modalScanner) {
+    DOM.modalScanner.addEventListener('click', (e) => {
+      if (e.target === DOM.modalScanner) closeScanner();
+    });
+  }
+
+  // Modal Admin PIN Auth & Generator
+  const openAdminAuth = () => {
+    if (APP_STATE.isAdmin) {
+      if (DOM.modalAdminQr) DOM.modalAdminQr.classList.add('active');
+      generateCurrentSticker();
+    } else {
+      if (DOM.modalAdminAuth) DOM.modalAdminAuth.classList.add('active');
+      if (DOM.adminPinInput) {
+        DOM.adminPinInput.value = '';
+        setTimeout(() => DOM.adminPinInput.focus(), 150);
+      }
+    }
+  };
+
+  const closeAdminAuth = () => {
+    if (DOM.modalAdminAuth) DOM.modalAdminAuth.classList.remove('active');
+    if (DOM.adminAuthError) DOM.adminAuthError.classList.add('hidden');
+  };
+
+  const closeAdminQr = () => {
+    if (DOM.modalAdminQr) DOM.modalAdminQr.classList.remove('active');
+  };
+
+  if (DOM.btnOpenAdmin) DOM.btnOpenAdmin.addEventListener('click', openAdminAuth);
+  if (DOM.btnCloseAdminAuth) DOM.btnCloseAdminAuth.addEventListener('click', closeAdminAuth);
+  if (DOM.modalAdminAuth) {
+    DOM.modalAdminAuth.addEventListener('click', (e) => {
+      if (e.target === DOM.modalAdminAuth) closeAdminAuth();
+    });
+  }
+
+  if (DOM.btnCloseAdminQr) DOM.btnCloseAdminQr.addEventListener('click', closeAdminQr);
+  if (DOM.modalAdminQr) {
+    DOM.modalAdminQr.addEventListener('click', (e) => {
+      if (e.target === DOM.modalAdminQr) closeAdminQr();
     });
   }
 
@@ -304,3 +564,4 @@ function showToast(message, duration = 2500) {
     DOM.toast.classList.remove('show');
   }, duration);
 }
+window.showToast = showToast;

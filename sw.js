@@ -1,9 +1,9 @@
 /**
  * Eco-Gotchi Service Worker (PWA Offline & Cache Engine)
- * Versi Cache: v1.3.0 (WebAR Standalone Monster Engine)
+ * Versi Cache: v1.5.0 (Admin QR Generator & Physical Sticker Feature)
  */
 
-const CACHE_NAME = 'ecogotchi-v1.3.0';
+const CACHE_NAME = 'ecogotchi-v1.5.0';
 
 // Asset inti yang di-cache saat instalasi service worker
 const CORE_ASSETS = [
@@ -12,6 +12,8 @@ const CORE_ASSETS = [
   './style.css',
   './app.js',
   './wallet.js',
+  './scanner.js',
+  './qr-generator.js',
   './camera.js',
   './game.js',
   './manifest.json',
@@ -24,7 +26,7 @@ const CORE_ASSETS = [
 
 // Event: Install - Pre-cache asset statis inti
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install Event: Mempersiapkan cache aset inti...');
+  console.log('[ServiceWorker] Install Event: Mempersiapkan cache aset inti Fase 4+Admin...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[ServiceWorker] Caching core assets...');

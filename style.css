@@ -824,7 +824,234 @@ body {
   transform: translateY(0);
 }
 
+/* ==========================================================================
+   FASE 4: SCANNER QR & REWARD MODAL STYLES
+   ========================================================================== */
+
+/* Tombol Scan Sampah di Halaman Lobby */
+.btn-scan-bin {
+  width: 100%;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, #00e5ff 0%, #00838f 100%);
+  color: #05140d;
+  font-family: var(--font-retro);
+  font-size: 0.82rem;
+  font-weight: bold;
+  border: 2px solid #69f0ae;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  transition: var(--transition-smooth);
+}
+
+.btn-scan-bin:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 229, 255, 0.2);
+}
+
+/* Scanner Viewfinder Box */
+.scanner-container {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  background: #000;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scanner-viewfinder {
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border: 1.5px solid rgba(0, 255, 157, 0.4);
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+}
+
+.scanner-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--color-neon-green);
+  border-style: solid;
+}
+
+.scanner-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; }
+.scanner-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; }
+.scanner-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; }
+.scanner-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
+
+.scanner-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ff9d, transparent);
+  box-shadow: 0 0 8px #00ff9d;
+  animation: laserScan 2s ease-in-out infinite alternate;
+}
+
+/* Cooldown Live Status Alert */
+.cooldown-alert-box {
+  background: rgba(255, 179, 0, 0.12);
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  color: var(--color-amber);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cooldown-alert-box.ready {
+  background: rgba(0, 255, 157, 0.12);
+  border-color: var(--color-neon-green);
+  color: var(--color-neon-green);
+}
+
+/* Simulator Quick Test Grid */
+.simulator-section {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(0, 255, 157, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.simulator-title {
+  font-family: var(--font-retro);
+  font-size: 0.65rem;
+  color: var(--color-cyan);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sim-bins-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.sim-bin-btn {
+  background: rgba(16, 40, 32, 0.9);
+  border: 1px solid var(--color-neon-green);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-smooth);
+}
+
+.sim-bin-btn:active {
+  transform: scale(0.95);
+  background: rgba(0, 255, 157, 0.25);
+}
+
+.sim-reward-tag {
+  font-family: var(--font-retro);
+  font-size: 0.6rem;
+  color: var(--color-amber);
+  margin-left: auto;
+}
+
+/* Reward Modal Popup */
+.reward-modal-card {
+  text-align: center;
+  padding: 24px 20px;
+}
+
+.reward-icon-anim {
+  font-size: 3.5rem;
+  margin-bottom: 12px;
+  display: inline-block;
+  animation: bounceCelebration 0.8s ease infinite alternate;
+}
+
+.reward-title {
+  font-family: var(--font-retro);
+  font-size: 0.95rem;
+  color: var(--color-neon-green);
+  margin-bottom: 6px;
+}
+
+.reward-category-name {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.reward-token-chip {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--color-amber);
+  border-radius: 30px;
+  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 20px rgba(255, 179, 0, 0.4);
+}
+
+.reward-amount {
+  font-family: var(--font-retro);
+  font-size: 1.3rem;
+  color: var(--color-amber);
+  font-weight: bold;
+}
+
+.btn-claim-reward {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(180deg, #00ff9d 0%, #00b368 100%);
+  color: #05140d;
+  font-family: var(--font-retro);
+  font-size: 0.85rem;
+  font-weight: bold;
+  border: 2px solid #76ff03;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 255, 157, 0.4);
+  transition: var(--transition-smooth);
+}
+
+.btn-claim-reward:active {
+  transform: scale(0.96);
+}
+
 /* --- Keyframe Animations --- */
+@keyframes laserScan {
+  0% { top: 5%; }
+  100% { top: 95%; }
+}
+
+@keyframes bounceCelebration {
+  0% { transform: translateY(0px) scale(1); }
+  100% { transform: translateY(-12px) scale(1.1); }
+}
+
 @keyframes radarRotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -859,3 +1086,120 @@ body {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
 }
+
+/* ==========================================================================
+   ADMIN PANEL & STICKER GENERATOR STYLES
+   ========================================================================== */
+
+/* Tombol Akses Admin di Lobby */
+.btn-admin-panel {
+  width: 100%;
+  padding: 10px;
+  background: rgba(10, 25, 20, 0.7);
+  border: 1px dashed rgba(0, 255, 157, 0.3);
+  color: var(--text-dim);
+  font-family: var(--font-retro);
+  font-size: 0.65rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  transition: var(--transition-smooth);
+}
+
+.btn-admin-panel:hover,
+.btn-admin-panel:active {
+  color: var(--color-neon-green);
+  border-color: var(--color-neon-green);
+  background: rgba(0, 255, 157, 0.1);
+}
+
+/* Form Input Admin */
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.admin-label {
+  font-family: var(--font-retro);
+  font-size: 0.62rem;
+  color: var(--color-cyan);
+}
+
+.admin-input,
+.admin-select {
+  width: 100%;
+  background: rgba(10, 25, 20, 0.9);
+  border: 1.5px solid rgba(0, 255, 157, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: #ffffff;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  outline: none;
+  transition: var(--transition-smooth);
+}
+
+.admin-input:focus,
+.admin-select:focus {
+  border-color: var(--color-neon-green);
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+}
+
+.admin-input.pin {
+  font-family: monospace;
+  font-size: 1.2rem;
+  letter-spacing: 6px;
+  text-align: center;
+}
+
+.admin-error-text {
+  font-size: 0.72rem;
+  color: var(--color-danger);
+  margin-top: 6px;
+}
+
+/* Sticker Preview Container */
+.sticker-preview-wrapper {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.sticker-preview-label {
+  font-family: var(--font-retro);
+  font-size: 0.62rem;
+  color: var(--color-amber);
+  margin-bottom: 8px;
+}
+
+.sticker-canvas-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+#sticker-preview-canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+}
+
+.admin-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+

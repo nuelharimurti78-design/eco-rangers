@@ -1,6 +1,6 @@
 /**
  * Eco-Gotchi: WebAR Tamagotchi Daur Ulang
- * Fase 3: Eco-Token Wallet & Local Storage Controller
+ * Fase 3 & 4: Eco-Token Wallet & Activity Tracker
  */
 
 const STORAGE_KEY = 'ECOGOTCHI_WALLET_DATA_V1';
@@ -9,6 +9,7 @@ const DEFAULT_WALLET_DATA = {
   balance: 50, // Bonus awal pemain baru
   totalEarned: 50,
   totalSpent: 0,
+  recycleCount: 0, // Jumlah pemindaian daur ulang yang berhasil
   transactions: [
     {
       id: 'tx_init',
@@ -32,6 +33,9 @@ const WalletManager = {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         this.data = JSON.parse(saved);
+        if (typeof this.data.recycleCount !== 'number') {
+          this.data.recycleCount = 0;
+        }
       } else {
         this.data = JSON.parse(JSON.stringify(DEFAULT_WALLET_DATA));
         this.save();
@@ -40,7 +44,7 @@ const WalletManager = {
       console.error('[WalletManager] Gagal memuat data dari localStorage:', e);
       this.data = JSON.parse(JSON.stringify(DEFAULT_WALLET_DATA));
     }
-    console.log('[WalletManager] Dompet aktif. Saldo saat ini:', this.data.balance, 'Eco-Tokens');
+    console.log('[WalletManager] Dompet aktif. Saldo:', this.data.balance, 'Eco-Tokens | Total Scan:', this.data.recycleCount);
     this.notify();
   },
 
@@ -64,6 +68,22 @@ const WalletManager = {
   },
 
   /**
+   * Dapatkan total pemindaian daur ulang
+   */
+  getRecycleCount() {
+    return this.data ? (this.data.recycleCount || 0) : 0;
+  },
+
+  /**
+   * Tambah hitungan aktivitas daur ulang
+   */
+  incrementRecycleCount() {
+    if (!this.data) return;
+    this.data.recycleCount = (this.data.recycleCount || 0) + 1;
+    this.save();
+  },
+
+  /**
    * Dapatkan ringkasan statistik dompet
    */
   getSummary() {
@@ -71,6 +91,7 @@ const WalletManager = {
       balance: this.data.balance,
       totalEarned: this.data.totalEarned,
       totalSpent: this.data.totalSpent,
+      recycleCount: this.getRecycleCount(),
       txCount: this.data.transactions.length
     };
   },
@@ -133,8 +154,7 @@ const WalletManager = {
   onChange(callback) {
     if (typeof callback === 'function') {
       this.listeners.push(callback);
-      // Panggil segera dengan data saat ini
-      callback(this.getBalance(), this.getTransactions());
+      callback(this.getBalance(), this.getTransactions(), this.getRecycleCount());
     }
   },
 
@@ -144,9 +164,10 @@ const WalletManager = {
   notify() {
     const bal = this.getBalance();
     const txs = this.getTransactions();
+    const recycleCount = this.getRecycleCount();
     this.listeners.forEach((cb) => {
       try {
-        cb(bal, txs);
+        cb(bal, txs, recycleCount);
       } catch (err) {
         console.error('[WalletManager] Error pada listener callback:', err);
       }

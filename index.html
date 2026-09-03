@@ -96,6 +96,10 @@
           <span>🚀</span> MASUK MODE AR
         </button>
 
+        <button id="btn-open-scanner" class="btn-scan-bin">
+          <span>📷</span> SCAN TEMPAT SAMPAH (+ECO)
+        </button>
+
         <div class="secondary-menu-grid">
           <button id="btn-open-wallet" class="btn-menu-secondary amber">
             <span>💰</span> DOMPET
@@ -104,6 +108,10 @@
             <span>📜</span> PANDUAN
           </button>
         </div>
+
+        <button id="btn-open-admin" class="btn-admin-panel" title="Akses Khusus Pengelola/Admin">
+          <span>🔒</span> PANEL ADMIN (QR GENERATOR)
+        </button>
       </section>
     </main>
 
@@ -217,17 +225,185 @@
       </div>
     </div>
 
+    <!-- ====================================================================
+         MODAL 3: SCANNER QR CODE TEMPAT SAMPAH
+         ==================================================================== -->
+    <div id="modal-scanner" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title"><span>📷</span> SCANNER TONG SAMPAH</h3>
+          <button id="btn-close-scanner" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Viewfinder Kamera Scanner -->
+          <div class="scanner-container">
+            <video id="scanner-video" autoplay playsinline webkit-playsinline muted></video>
+            <div class="scanner-viewfinder">
+              <div class="scanner-corner tl"></div>
+              <div class="scanner-corner tr"></div>
+              <div class="scanner-corner bl"></div>
+              <div class="scanner-corner br"></div>
+              <div class="scanner-laser"></div>
+            </div>
+          </div>
+
+          <!-- Status Cooldown Anti-Cheat -->
+          <div id="cooldown-status-box" class="cooldown-alert-box ready">
+            <span>🛡️</span>
+            <span id="cooldown-status-text">Anti-Cheat: Scanner Siap Digunakan</span>
+          </div>
+
+          <!-- Simulator Uji Coba Cepat (Testing Mode) -->
+          <div class="simulator-section">
+            <div class="simulator-title">
+              <span>⚡</span> UJI COBA CEPAT (SIMULATOR):
+            </div>
+            <div class="sim-bins-grid">
+              <button class="sim-bin-btn" data-bin="PLASTIC">
+                <span>🥤</span> Plastik
+                <span class="sim-reward-tag">+20 ECO</span>
+              </button>
+              <button class="sim-bin-btn" data-bin="PAPER">
+                <span>📄</span> Kertas
+                <span class="sim-reward-tag">+15 ECO</span>
+              </button>
+              <button class="sim-bin-btn" data-bin="METAL">
+                <span>🥫</span> Logam
+                <span class="sim-reward-tag">+25 ECO</span>
+              </button>
+              <button class="sim-bin-btn" data-bin="ORGANIC">
+                <span>🍎</span> Organik
+                <span class="sim-reward-tag">+10 ECO</span>
+              </button>
+              <button class="sim-bin-btn" data-bin="GLASS" style="grid-column: span 2;">
+                <span>🍾</span> Kaca & Botol Beling
+                <span class="sim-reward-tag">+30 ECO</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 4: POPUP IMBALAN (REWARD POPUP)
+         ==================================================================== -->
+    <div id="modal-reward" class="modal-backdrop">
+      <div class="modal-card reward-modal-card">
+        <div id="reward-icon" class="reward-icon-anim">🥤</div>
+        <h3 class="reward-title">DAUR ULANG BERHASIL!</h3>
+        <p id="reward-bin-name" class="reward-category-name">Tempat Sampah Plastik</p>
+        
+        <div class="reward-token-chip">
+          <span style="font-size: 1.5rem;">🪙</span>
+          <span id="reward-amount-text" class="reward-amount">+20 ECO</span>
+        </div>
+
+        <button id="btn-claim-reward" class="btn-claim-reward">
+          KLAIM & SIMPAN TOKEN
+        </button>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 5: LOGIN PIN ADMIN (KEAMANAN)
+         ==================================================================== -->
+    <div id="modal-admin-auth" class="modal-backdrop">
+      <div class="modal-card" style="max-width: 360px;">
+        <div class="modal-header">
+          <h3 class="modal-title"><span>🔒</span> AUTENTIKASI ADMIN</h3>
+          <button id="btn-close-admin-auth" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Masukkan PIN Admin untuk mengakses pembuatan QR Code stiker tempat sampah.
+          </p>
+          <div class="pin-input-box">
+            <input type="password" id="admin-pin-input" class="admin-input pin" placeholder="••••••••" maxlength="12" autofocus>
+          </div>
+          <p id="admin-auth-error" class="admin-error-text hidden">⚠️ PIN salah! Silakan coba lagi.</p>
+          <button id="btn-submit-admin-pin" class="btn-primary" style="margin-top: 10px;">
+            MASUK PANEL ADMIN
+          </button>
+          <p style="font-size: 0.65rem; color: var(--text-dim); margin-top: 8px;">
+            (Default PIN: <code>admin123</code>)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL 6: ADMIN QR & STICKER GENERATOR
+         ==================================================================== -->
+    <div id="modal-admin-qr" class="modal-backdrop">
+      <div class="modal-card" style="max-width: 460px;">
+        <div class="modal-header">
+          <h3 class="modal-title"><span>🛠️</span> PEMBUAT STIKER QR TONG</h3>
+          <button id="btn-close-admin-qr" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Form Input Metadata Tempat Sampah -->
+          <div class="admin-form-group">
+            <label class="admin-label">Kategori / Jenis Sampah:</label>
+            <select id="qr-bin-type" class="admin-select">
+              <option value="PLASTIC" selected>🥤 Daur Ulang Plastik (+20 ECO)</option>
+              <option value="PAPER">📄 Daur Ulang Kertas & Kardus (+15 ECO)</option>
+              <option value="METAL">🥫 Daur Ulang Logam & Kaleng (+25 ECO)</option>
+              <option value="ORGANIC">🍎 Kompos Sampah Organik (+10 ECO)</option>
+              <option value="GLASS">🍾 Daur Ulang Kaca & Botol (+30 ECO)</option>
+            </select>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-label">Nama / Lokasi Tempat Sampah:</label>
+            <input type="text" id="qr-bin-location" class="admin-input" placeholder="Contoh: Kantin Gedung A Lt. 1" value="Kantin Utama Gedung A">
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-label">ID Tempat Sampah (Unik):</label>
+            <input type="text" id="qr-bin-id" class="admin-input" placeholder="Contoh: BIN-PLASTIC-001" value="BIN-PLASTIC-001">
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-label">Petunjuk Pembuangan:</label>
+            <input type="text" id="qr-bin-instructions" class="admin-input" placeholder="Contoh: Hanya botol plastik bersih" value="Hanya botol & gelas plastik bersih">
+          </div>
+
+          <button id="btn-generate-sticker" class="btn-primary" style="margin-top: 4px;">
+            <span>⚡</span> GENERATE PREVIEW STIKER
+          </button>
+
+          <!-- Preview Stiker QR Siap Cetak -->
+          <div class="sticker-preview-wrapper">
+            <div class="sticker-preview-label">PREVIEW STIKER FISIK:</div>
+            <div class="sticker-canvas-container">
+              <canvas id="sticker-preview-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Aksi Download & Print -->
+          <div class="admin-actions-grid">
+            <button id="btn-download-sticker" class="btn-menu-secondary amber">
+              <span>💾</span> UNDUH PNG
+            </button>
+            <button id="btn-print-sticker" class="btn-menu-secondary">
+              <span>🖨️</span> CETAK STIKER
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div class="toast-container">
       <div id="toast-notification" class="toast"></div>
     </div>
   </div>
 
-  <!-- Phaser 3 Framework (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-
   <!-- Application Modules -->
   <script src="wallet.js"></script>
+  <script src="scanner.js"></script>
+  <script src="qr-generator.js"></script>
   <script src="camera.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
