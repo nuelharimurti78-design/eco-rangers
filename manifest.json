@@ -1,15 +1,33 @@
 {
-  "name": "Eco-Rangers 8-Bit",
-  "short_name": "EcoRangers",
-  "start_url": "index.html",
+  "name": "Eco-Gotchi: WebAR Tamagotchi Daur Ulang",
+  "short_name": "EcoGotchi",
+  "description": "Aplikasi WebAR Tamagotchi Daur Ulang berbasis PWA dengan sistem imbalan Eco-Token melalui pemindaian tempat sampah fisik.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0b1a0e",
-  "theme_color": "#112614",
+  "background_color": "#0a1914",
+  "theme_color": "#00ff9d",
+  "orientation": "portrait-primary",
+  "lang": "id-ID",
+  "categories": ["games", "entertainment", "education"],
   "icons": [
     {
-      "src": "icon.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

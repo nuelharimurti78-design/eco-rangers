@@ -1,141 +1,861 @@
-/* Reset Dasar & Pengaturan Font Piksel */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Press Start 2P', monospace;
+/* ==========================================================================
+   Eco-Gotchi: WebAR Tamagotchi Daur Ulang
+   Fase 1, 2, & 3: PWA + WebAR Engine + Lobby & Eco-Token Ecosystem
+   ========================================================================== */
+
+/* --- CSS Variables & Design Tokens --- */
+:root {
+  --bg-primary: #0a1914;
+  --bg-secondary: #102820;
+  --bg-card: rgba(16, 40, 32, 0.90);
+  --bg-card-border: #00ff9d;
+  
+  --color-neon-green: #00ff9d;
+  --color-neon-glow: rgba(0, 255, 157, 0.4);
+  --color-eco-sprout: #76ff03;
+  --color-cyan: #00e5ff;
+  --color-amber: #ffb300;
+  --color-pink: #ff4081;
+  --color-danger: #ff5252;
+  
+  --text-main: #e8f5e9;
+  --text-muted: #81c784;
+  --text-dim: #4e7d69;
+  
+  --font-retro: 'Press Start 2P', 'Courier New', monospace;
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  
+  --shadow-neon: 0 0 15px var(--color-neon-glow);
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Reset & Box Sizing --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  position: fixed;
 }
 
 body {
-    background-color: #0b1a0e;
-    color: #33ff66;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(0, 255, 157, 0.08) 0%, transparent 60%),
+    linear-gradient(rgba(10, 25, 20, 0.95), rgba(10, 25, 20, 0.95)),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 157, 0.03) 3px, rgba(0, 255, 157, 0.03) 4px);
 }
 
-/* Bingkai Game utama menyerupai layar konsol klasik */
-#game-container {
-    width: 100%;
-    max-width: 480px;
-    height: 100vh;
-    max-height: 850px;
-    background-color: #112614;
-    border: 4px solid #33ff66;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 15px;
-    position: relative;
-    box-shadow: 0 0 20px rgba(51, 255, 102, 0.3);
+/* --- Master Mobile Container (App Shell) --- */
+#app {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--bg-primary);
+  border-left: 1px solid rgba(0, 255, 157, 0.15);
+  border-right: 1px solid rgba(0, 255, 157, 0.15);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
 }
 
-/* Header Status */
-#header-bar {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    border-bottom: 2px dashed #33ff66;
-    padding-bottom: 10px;
+/* --- Header / Top Bar --- */
+.app-header {
+  padding: 10px 14px;
+  background-color: rgba(16, 40, 32, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--bg-card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
 }
 
-/* Layar Tampilan Tengah */
-#screen-view {
-    flex-grow: 1;
-    background-color: #050d07;
-    border: 2px solid #33ff66;
-    margin: 15px 0;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    overflow: hidden;
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Efek Garis-garis TV Tabung (Scanline) */
-.scanline-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.25) 50%
-    );
-    background-size: 100% 4px;
-    pointer-events: none;
-    z-index: 10;
+.brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--color-neon-green);
+  filter: drop-shadow(0 0 5px var(--color-neon-glow));
 }
 
-#pixel-text h1 {
-    font-size: 16px;
-    margin-bottom: 15px;
-    text-shadow: 2px 2px #000;
+.brand-title {
+  font-family: var(--font-retro);
+  font-size: 0.78rem;
+  color: var(--color-neon-green);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px var(--color-neon-glow);
 }
 
-/* Efek Teks Berkedip */
-.blink {
-    font-size: 10px;
-    animation: blink-animation 1s steps(2, start) infinite;
+.brand-version {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-ui);
 }
 
-@keyframes blink-animation {
-    to {
-        visibility: hidden;
-    }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-/* Tombol Kontrol Bergaya Kotak 8-Bit */
-#control-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+/* Token Wallet Chip Button */
+.token-chip {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1.5px solid var(--color-amber);
+  border-radius: 20px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255, 179, 0, 0.3);
+  transition: var(--transition-smooth);
 }
 
-.retro-btn {
-    background-color: #112614;
-    color: #33ff66;
-    border: 3px solid #33ff66;
-    padding: 15px;
-    font-size: 12px;
-    cursor: pointer;
-    text-align: center;
-    box-shadow: 3px 3px 0px #33ff66;
-    transition: 0.1s;
+.token-chip:active {
+  transform: scale(0.95);
 }
 
-.retro-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0px #33ff66;
+.token-icon {
+  font-size: 0.85rem;
 }
 
-/* Styling untuk Kamera AI */
+.token-amount {
+  font-family: var(--font-retro);
+  font-size: 0.72rem;
+  color: var(--color-amber);
+  font-weight: bold;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-neon-green);
+  box-shadow: 0 0 6px var(--color-neon-green);
+  transition: var(--transition-smooth);
+}
+
+.status-badge.offline .status-dot {
+  background-color: var(--color-danger);
+  box-shadow: 0 0 6px var(--color-danger);
+}
+
+.status-badge.offline {
+  border-color: rgba(255, 82, 82, 0.4);
+  color: var(--color-danger);
+}
+
+/* --- View Management (Router Containers) --- */
+.view-screen {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 55px);
+  position: relative;
+  display: none;
+  overflow: hidden;
+}
+
+.view-screen.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==========================================================================
+   VIEW 1: LOBBY / HOME SCREEN
+   ========================================================================== */
+#view-lobby {
+  padding: 16px;
+  overflow-y: auto;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+/* Monster Highlight Hero Card */
+.lobby-hero-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--bg-card-border);
+  border-radius: var(--radius-md);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: var(--shadow-neon);
+  position: relative;
+  overflow: hidden;
+  animation: cardFadeIn 0.5s ease-out;
+}
+
+.lobby-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-neon-green), transparent);
+  animation: scanLine 3s linear infinite;
+}
+
+.monster-stage-preview {
+  margin-bottom: 12px;
+  position: relative;
+  display: inline-block;
+}
+
+.monster-avatar-glow {
+  width: 90px;
+  height: 90px;
+  animation: floatUpDown 2.2s ease-in-out infinite alternate;
+  filter: drop-shadow(0 8px 16px rgba(0, 255, 157, 0.45));
+}
+
+.monster-name {
+  font-family: var(--font-retro);
+  font-size: 1rem;
+  color: var(--color-neon-green);
+  margin-bottom: 4px;
+}
+
+.monster-status-pills {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.status-pill {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  color: var(--text-muted);
+}
+
+.status-pill.highlight {
+  border-color: var(--color-eco-sprout);
+  color: var(--color-eco-sprout);
+}
+
+/* Quick Stats Bar in Lobby */
+.lobby-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.stat-card {
+  background: rgba(16, 40, 32, 0.85);
+  border: 1px solid rgba(0, 255, 157, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-icon {
+  font-size: 1.4rem;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  display: block;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.stat-val {
+  font-family: var(--font-retro);
+  font-size: 0.8rem;
+  color: var(--color-neon-green);
+}
+
+/* Lobby Navigation Menu Buttons */
+.lobby-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-launch-ar {
+  width: 100%;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #00ff9d 0%, #00b368 100%);
+  color: #05140d;
+  font-family: var(--font-retro);
+  font-size: 0.88rem;
+  font-weight: bold;
+  border: 2px solid #76ff03;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 255, 157, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  transition: var(--transition-smooth);
+}
+
+.btn-launch-ar:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 255, 157, 0.3);
+}
+
+.secondary-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-menu-secondary {
+  background: rgba(16, 40, 32, 0.9);
+  border: 1.5px solid var(--color-cyan);
+  color: var(--color-cyan);
+  font-family: var(--font-retro);
+  font-size: 0.68rem;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  transition: var(--transition-smooth);
+}
+
+.btn-menu-secondary.amber {
+  border-color: var(--color-amber);
+  color: var(--color-amber);
+}
+
+.btn-menu-secondary:active {
+  transform: scale(0.96);
+  background: rgba(0, 229, 255, 0.15);
+}
+
+/* ==========================================================================
+   VIEW 2: WEBAR GAME SCREEN
+   ========================================================================== */
+#view-ar {
+  background-color: #050e0b;
+}
+
+/* Layer 1: Camera Video Feed */
 #camera-feed {
-    position: absolute;
-    top: 0; 
-    left: 0;
-    width: 100%; 
-    height: 100%;
-    object-fit: cover;
-    z-index: 1; /* Posisinya paling bawah */
-    display: none; /* Disembunyikan dulu sebelum tombol dipencet */
-    filter: grayscale(30%) sepia(50%) hue-rotate(70deg); /* Opsional: Bikin warna kamera agak kehijauan ala radar malam */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 10;
+  pointer-events: none;
+  background-color: transparent;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
-/* Memastikan teks tetap di atas kamera */
-#pixel-text {
-    position: relative;
-    z-index: 20;
+/* Fallback Camera Background */
+.camera-fallback-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 50% 50%, rgba(0, 255, 157, 0.12) 0%, transparent 70%),
+    linear-gradient(rgba(5, 18, 13, 0.9), rgba(5, 18, 13, 0.9)),
+    repeating-linear-gradient(0deg, rgba(0, 255, 157, 0.05) 0px, rgba(0, 255, 157, 0.05) 1px, transparent 1px, transparent 20px),
+    repeating-linear-gradient(90deg, rgba(0, 255, 157, 0.05) 0px, rgba(0, 255, 157, 0.05) 1px, transparent 1px, transparent 20px);
+  z-index: 5;
 }
 
-/* TAMBAHAN FASE 2: Posisi Game 2D */
-#phaser-game {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10; 
-    display: none; /* INI WAJIB ADA BIAR SEMBUNYI DI AWAL */
+/* Layer 2: Phaser.js Transparent Canvas */
+#game-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  pointer-events: auto;
+  background: transparent !important;
+  transform: translateZ(20px);
+  -webkit-transform: translateZ(20px);
+  will-change: transform;
+}
+
+#game-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  background: transparent !important;
+  pointer-events: auto;
+}
+
+/* Layer 3: 8-Bit Radar HUD Overlay */
+.radar-hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: none;
+  transform: translateZ(30px);
+  -webkit-transform: translateZ(30px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+/* AR Navigation Bar (Top in AR Mode) */
+.ar-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: auto;
+  z-index: 35;
+}
+
+.btn-back-lobby {
+  background: rgba(16, 40, 32, 0.92);
+  border: 1.5px solid var(--color-neon-green);
+  color: var(--color-neon-green);
+  font-family: var(--font-retro);
+  font-size: 0.68rem;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.3);
+  transition: var(--transition-smooth);
+}
+
+.btn-back-lobby:active {
+  transform: scale(0.95);
+  background: var(--color-neon-green);
+  color: #05140d;
+}
+
+/* Retro Corner Brackets */
+.hud-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: var(--color-neon-green);
+  border-style: solid;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.hud-corner.top-left { top: 48px; left: 12px; border-width: 3px 0 0 3px; }
+.hud-corner.top-right { top: 48px; right: 12px; border-width: 3px 3px 0 0; }
+.hud-corner.bottom-left { bottom: 68px; left: 12px; border-width: 0 0 3px 3px; }
+.hud-corner.bottom-right { bottom: 68px; right: 12px; border-width: 0 3px 3px 0; }
+
+/* Radar Sweep Widget */
+.radar-widget {
+  position: absolute;
+  top: 52px;
+  right: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-neon-green);
+  background: rgba(10, 25, 20, 0.75);
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.25);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.radar-sweep-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform-origin: 0 0;
+  background: conic-gradient(from 0deg, rgba(0, 255, 157, 0.6) 0deg, transparent 60deg);
+  animation: radarRotate 2.5s linear infinite;
+}
+
+.radar-blip {
+  position: absolute;
+  top: 48%;
+  left: 48%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--color-eco-sprout);
+  box-shadow: 0 0 6px var(--color-eco-sprout);
+  animation: blipPulse 1.2s ease-in-out infinite;
+}
+
+/* Central Target Reticle */
+.target-reticle {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 170px;
+  height: 170px;
+  border: 1px dashed rgba(0, 255, 157, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: reticlePulse 3s ease-in-out infinite;
+}
+
+/* Fallback Notice Message */
+.camera-fallback-msg {
+  position: absolute;
+  top: 55px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88%;
+  max-width: 380px;
+  background: rgba(10, 25, 20, 0.92);
+  border: 1px dashed var(--color-amber);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--color-amber);
+  font-size: 0.68rem;
+  text-align: center;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.3s ease;
+}
+
+.hidden, .camera-fallback-msg.hidden {
+  display: none !important;
+}
+
+/* AR Toolbar Controls */
+.ar-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 35;
+}
+
+.hud-btn {
+  background: rgba(16, 40, 32, 0.92);
+  border: 1.5px solid var(--color-neon-green);
+  color: var(--color-neon-green);
+  font-family: var(--font-retro);
+  font-size: 0.65rem;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  transition: var(--transition-smooth);
+}
+
+.hud-btn:active {
+  transform: scale(0.96);
+}
+
+.hud-btn.active {
+  background: var(--color-neon-green);
+  color: #05140d;
+}
+
+.interaction-tip {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 157, 0.2);
+}
+
+/* ==========================================================================
+   MODALS (Dompet Token & Panduan)
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(5, 15, 12, 0.85);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.modal-backdrop.active {
+  display: flex;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border: 1.5px solid var(--bg-card-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neon);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 14px 16px;
+  background: rgba(10, 25, 20, 0.95);
+  border-bottom: 1.5px solid var(--bg-card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-family: var(--font-retro);
+  font-size: 0.82rem;
+  color: var(--color-neon-green);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.modal-close:hover {
+  color: var(--color-pink);
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Wallet Card Summary */
+.wallet-balance-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-amber);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(255, 179, 0, 0.2);
+}
+
+.wallet-balance-title {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.wallet-balance-num {
+  font-family: var(--font-retro);
+  font-size: 1.5rem;
+  color: var(--color-amber);
+  text-shadow: 0 0 10px rgba(255, 179, 0, 0.4);
+}
+
+.wallet-history-title {
+  font-family: var(--font-retro);
+  font-size: 0.72rem;
+  color: var(--color-cyan);
+  margin-top: 4px;
+}
+
+.tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.tx-item {
+  background: rgba(10, 25, 20, 0.8);
+  border: 1px solid rgba(0, 255, 157, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.tx-desc {
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.tx-time {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+.tx-amount {
+  font-family: var(--font-retro);
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.tx-amount.earn { color: var(--color-neon-green); }
+.tx-amount.spend { color: var(--color-pink); }
+
+/* Guide Content */
+.guide-step {
+  background: rgba(10, 25, 20, 0.7);
+  border-left: 3px solid var(--color-cyan);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 12px;
+}
+
+.guide-step-title {
+  font-family: var(--font-retro);
+  font-size: 0.7rem;
+  color: var(--color-cyan);
+  margin-bottom: 4px;
+}
+
+.guide-step-desc {
+  font-size: 0.78rem;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+/* --- Toast Notification --- */
+.toast-container {
+  position: absolute;
+  top: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 400px;
+  z-index: 250;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: rgba(16, 40, 32, 0.96);
+  border: 1.5px solid var(--color-neon-green);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  color: var(--text-main);
+  font-size: 0.75rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Keyframe Animations --- */
+@keyframes radarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blipPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+@keyframes reticlePulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+  50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.8; }
+}
+
+@keyframes floatUpDown {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-8px); }
+}
+
+@keyframes scanLine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }

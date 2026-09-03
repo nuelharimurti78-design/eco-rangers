@@ -1,50 +1,235 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Eco-Rangers 8-Bit</title>
-    <!-- Menghubungkan Google Font bergaya Retro 8-Bit -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <!-- Menghubungkan file CSS eksternal -->
-    <link rel="stylesheet" href="style.css">
-    <!-- Menghubungkan manifest untuk PWA -->
-    <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Eco-Gotchi | WebAR Tamagotchi Daur Ulang</title>
+
+  <!-- PWA & Mobile Meta Tags -->
+  <meta name="description" content="Aplikasi WebAR Tamagotchi Daur Ulang berbasis PWA dengan sistem imbalan Eco-Token.">
+  <meta name="theme-color" content="#00ff9d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EcoGotchi">
+  
+  <!-- Favicon & Touch Icons -->
+  <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Google Fonts: Press Start 2P for Retro 8-Bit Vibes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <!-- Kontainer Utama Layar Game -->
-    <div id="game-container">
-        
-        <!-- Header / Status Bar Retro -->
-        <div id="header-bar">
-            <span>HP: <span id="player-hp">100</span></span>
-            <span>LEVEL: <span id="player-lvl">1</span></span>
+  <div id="app">
+    <!-- Header / Status Bar -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <img src="icons/icon-192.png" alt="EcoGotchi Logo" class="brand-icon">
+        <div>
+          <h1 class="brand-title">ECO-GOTCHI</h1>
+          <span class="brand-version">Fase 3: Lobby & Dompet</span>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <!-- Token Balance Chip (Bisa diklik untuk buka Dompet) -->
+        <div id="header-token-chip" class="token-chip" title="Buka Dompet Token">
+          <span class="token-icon">🪙</span>
+          <span id="header-token-val" class="token-amount">50</span>
         </div>
 
-       <!-- Layar Utama / Tampilan Radar atau Kamera -->
-        <div id="screen-view">
-            <!-- Ini tag kamera yang baru ditambahkan -->
-            <video id="camera-feed" autoplay playsinline></video>
-            
-            <!-- TAMBAHAN FASE 2: Wadah transparan untuk monster 2D -->
-            <div id="phaser-game"></div>
-            <div class="scanline-overlay"></div>
-            <div id="pixel-text">
-                <h1>ECO-RANGERS</h1>
-                <p class="blink">PRESS START</p>
-            </div>
+        <!-- Network Status Badge -->
+        <div id="network-status" class="status-badge" title="Status Jaringan">
+          <span class="status-dot"></span>
+          <span id="network-text">ONLINE</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         VIEW 1: HALAMAN LOBBY (BERANDA UTAMA)
+         ==================================================================== -->
+    <main id="view-lobby" class="view-screen active">
+      <!-- Monster Overview Hero Card -->
+      <section class="lobby-hero-card">
+        <div class="monster-stage-preview">
+          <img src="icons/icon-192.png" alt="Slime Monster" class="monster-avatar-glow">
+        </div>
+        <h2 class="monster-name">ECO-SLIME</h2>
+        <div class="monster-status-pills">
+          <span class="status-pill highlight">🌱 Level 1 (Bayi)</span>
+          <span class="status-pill">😊 Mood: Ceria</span>
+        </div>
+      </section>
+
+      <!-- Quick Stats Grid -->
+      <section class="lobby-stats-grid">
+        <div class="stat-card">
+          <span class="stat-icon">🪙</span>
+          <div>
+            <span class="stat-label">Saldo Token</span>
+            <span id="lobby-token-stat" class="stat-val">50 ECO</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">♻️</span>
+          <div>
+            <span class="stat-label">Total Daur Ulang</span>
+            <span id="lobby-recycle-stat" class="stat-val">0x Scan</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lobby Menu Action Buttons -->
+      <section class="lobby-menu">
+        <button id="btn-enter-ar" class="btn-launch-ar">
+          <span>🚀</span> MASUK MODE AR
+        </button>
+
+        <div class="secondary-menu-grid">
+          <button id="btn-open-wallet" class="btn-menu-secondary amber">
+            <span>💰</span> DOMPET
+          </button>
+          <button id="btn-open-guide" class="btn-menu-secondary">
+            <span>📜</span> PANDUAN
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- ====================================================================
+         VIEW 2: HALAMAN WEBAR GAME
+         ==================================================================== -->
+    <main id="view-ar" class="view-screen">
+      <!-- Fallback Simulation Background -->
+      <div id="camera-fallback-bg" class="camera-fallback-bg"></div>
+
+      <!-- Layer 1: Camera Video Feed -->
+      <video id="camera-feed" autoplay playsinline webkit-playsinline muted></video>
+
+      <!-- Layer 2: Phaser.js Canvas Container -->
+      <div id="game-container"></div>
+
+      <!-- Layer 3: 8-Bit Radar HUD Overlay -->
+      <div class="radar-hud-overlay">
+        <!-- AR Navigation Bar (Top) -->
+        <div class="ar-nav-bar">
+          <button id="btn-back-lobby" class="btn-back-lobby" title="Kembali ke Lobby">
+            <span>⬅</span> HOME
+          </button>
+          <div class="tracking-info">
+            <span class="scan-pulse"></span>
+            <span>AR: SLIME-01</span>
+          </div>
         </div>
 
-        <!-- Tombol Aksi Bawah -->
-        <div id="control-panel">
-            <button id="btn-start" class="retro-btn">MULAI BERBURU</button>
+        <!-- Sci-Fi HUD Corner Brackets -->
+        <div class="hud-corner top-left"></div>
+        <div class="hud-corner top-right"></div>
+        <div class="hud-corner bottom-left"></div>
+        <div class="hud-corner bottom-right"></div>
+
+        <!-- Radar Sweep Widget -->
+        <div class="radar-widget" title="Eco-Signal Radar">
+          <div class="radar-sweep-line"></div>
+          <div class="radar-blip"></div>
         </div>
 
+        <!-- Central Target Reticle -->
+        <div class="target-reticle"></div>
+
+        <!-- Fallback Notice -->
+        <div id="camera-fallback-msg" class="camera-fallback-msg hidden">
+          Klik 'Kamera AR' untuk mengaktifkan video kamera belakang.
+        </div>
+
+        <!-- AR Bottom Action Toolbar -->
+        <div class="ar-toolbar">
+          <button id="btn-toggle-cam" class="hud-btn" title="Nyalakan / Matikan Kamera">
+            <span>📷</span> KAMERA
+          </button>
+          <div class="interaction-tip">
+            👉 Ketuk monster untuk bermain!
+          </div>
+          <button id="btn-flip-cam" class="hud-btn" title="Ganti Kamera Depan / Belakang">
+            <span>🔄</span> FLIP
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ====================================================================
+         MODAL 1: DOMPET ECO-TOKEN
+         ==================================================================== -->
+    <div id="modal-wallet" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title"><span>💰</span> DOMPET ECO-TOKEN</h3>
+          <button id="btn-close-wallet" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="wallet-balance-box">
+            <div class="wallet-balance-title">Saldo Tersedia</div>
+            <div id="modal-wallet-balance" class="wallet-balance-num">50 ECO</div>
+          </div>
+
+          <h4 class="wallet-history-title">RIWAYAT TRANSAKSI</h4>
+          <div id="tx-history-list" class="tx-list">
+            <!-- Diisi secara dinamis via JavaScript -->
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Menghubungkan file JavaScript -->
-    <script src="app.js"></script>
+    <!-- ====================================================================
+         MODAL 2: PANDUAN PERMAINAN
+         ==================================================================== -->
+    <div id="modal-guide" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title"><span>📜</span> PANDUAN ECO-GOTCHI</h3>
+          <button id="btn-close-guide" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="guide-step">
+            <div class="guide-step-title">1. JELAJAHI MODE WEBAR</div>
+            <div class="guide-step-desc">Masuk ke Mode AR untuk melihat monster Slime Anda melayang di dunia nyata lewat kamera HP.</div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-title">2. KUMPULKAN ECO-TOKEN</div>
+            <div class="guide-step-desc">Pindai QR Code pada tempat sampah daur ulang fisik (Fase 4) untuk mendapatkan imbalan Eco-Token.</div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-step-title">3. RAWAT & EVOLUSI MONSTER</div>
+            <div class="guide-step-desc">Gunakan Eco-Token untuk membeli makanan dan menaikkan level monster Anda hingga berevolusi!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container">
+      <div id="toast-notification" class="toast"></div>
+    </div>
+  </div>
+
+  <!-- Phaser 3 Framework (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+
+  <!-- Application Modules -->
+  <script src="wallet.js"></script>
+  <script src="camera.js"></script>
+  <script src="game.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
