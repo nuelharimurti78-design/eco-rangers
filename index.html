@@ -10,6 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <!-- CSS Stylesheet -->
   <link rel="stylesheet" href="style.css">
+  
+  <!-- Firebase Web SDK v9 (Compat Mode) via Official CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
   <!-- External CDN Library: jsQR for QR Code Scanning -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <!-- External CDN Library: QRCode.js for Admin QR Code Generator -->
@@ -34,7 +40,7 @@
     <div class="crt-scanlines"></div>
     <div class="nes-screen-frame"></div>
 
-    <!-- LAYER 3 (TOP HUD): STATUS BARS & SPEECH BUBBLE -->
+    <!-- LAYER 3 (TOP HUD): STATUS BARS, CLOUD STATUS & SPEECH BUBBLE -->
     <header id="hudHeader" class="hud-layer">
       <div class="hud-top-bar">
         <!-- Partner Monster Info -->
@@ -64,8 +70,14 @@
           </div>
         </div>
 
-        <!-- Secret Admin Button -->
-        <button id="btnAdminTrigger" class="btn-retro btn-secret" title="Panel Admin">🔑</button>
+        <!-- Secret Admin & Cloud Status Container -->
+        <div class="hud-right-actions">
+          <button id="btnAdminTrigger" class="btn-retro btn-secret" title="Panel Admin">🔑</button>
+          <div id="cloudStatusBadge" class="cloud-status-badge offline" title="Status Koneksi Firebase Realtime Cloud">
+            <span class="status-dot"></span>
+            <span id="cloudStatusText" class="status-text">OFFLINE</span>
+          </div>
+        </div>
       </div>
 
       <!-- Dynamic Micro-Dialogue Speech Bubble -->
@@ -224,7 +236,7 @@
         <button class="btn-close closeModal">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="desc">Peringkat Poin Kebersihan & Bank Sampah Per Kelas</p>
+        <p class="desc">Peringkat Poin Kebersihan & Bank Sampah Per Kelas (Realtime Cloud Sync)</p>
         <ul id="leaderboardList" class="rank-list">
           <!-- Populated by JS -->
         </ul>
@@ -256,10 +268,11 @@
         <button id="btnAdminExit" class="btn-retro btn-danger">✖ KELUAR</button>
       </div>
 
-      <!-- Admin Tabs Navigation (6 Tabs) -->
+      <!-- Admin Tabs Navigation (7 Tabs) -->
       <div class="admin-tabs">
         <button class="tab-btn active" data-tab="tabQr">🔲 QR Generator</button>
         <button class="tab-btn" data-tab="tabLogs">📜 Log Bukti Sampah</button>
+        <button class="tab-btn" data-tab="tabFirebase">🔥 Cloud Firebase</button>
         <button class="tab-btn" data-tab="tabMonster">👾 Input/Edit Monster</button>
         <button class="tab-btn" data-tab="tabQuiz">❓ Bank Soal</button>
         <button class="tab-btn" data-tab="tabRank">🏆 Leaderboard</button>
@@ -292,10 +305,54 @@
       <!-- Tab Content 1.5: Audit Log Bukti Foto Sampah -->
       <div id="tabLogs" class="tab-content">
         <h3>📜 AUDIT LOG BUKTI FOTO SAMPAH & SCAN HARIAN</h3>
-        <p class="desc">Rekapitulasi bukti fisik foto pemilahan sampah dan status anti-cheat yang tersimpan di localStorage:</p>
+        <p class="desc">Rekapitulasi bukti fisik foto pemilahan sampah dan status anti-cheat yang tersimpan di Cloud DB & localStorage:</p>
         <button id="btnClearLogs" class="btn-retro btn-danger mb-10" style="padding:4px 8px; font-size:7px;">🗑️ HAPUS ALL LOG HARIAN</button>
         <div id="adminScanLogsList" class="scan-logs-grid">
           <!-- Dynamically populated scan logs -->
+        </div>
+      </div>
+
+      <!-- Tab Content 1.8: Firebase Credentials & Hybrid Cloud Setup -->
+      <div id="tabFirebase" class="tab-content">
+        <h3>🔥 KONFIGURASI GOOGLE FIREBASE CLOUD BACKEND</h3>
+        <p class="desc">Masukkan kredensial Firebase Web SDK v9 (Compat Mode) untuk mengaktifkan sinkronisasi Cloud Realtime Database & Storage. Jika kosong/offline, aplikasi otomatis menggunakan LocalStorage.</p>
+        
+        <div id="firebaseConnectionStatus" class="retro-box mb-10 text-center" style="font-size:8px; color:var(--color-yellow);">
+          Status Koneksi: Check status...
+        </div>
+
+        <div class="admin-form-group">
+          <label>API Key (apiKey):</label>
+          <input type="text" id="fbApiKey" class="retro-input" placeholder="AIzaSy...">
+        </div>
+        <div class="admin-form-group">
+          <label>Auth Domain (authDomain):</label>
+          <input type="text" id="fbAuthDomain" class="retro-input" placeholder="eco-rangers.firebaseapp.com">
+        </div>
+        <div class="admin-form-group">
+          <label>Database URL (databaseURL):</label>
+          <input type="text" id="fbDatabaseUrl" class="retro-input" placeholder="https://eco-rangers-default-rtdb.firebaseio.com">
+        </div>
+        <div class="admin-form-group">
+          <label>Project ID (projectId):</label>
+          <input type="text" id="fbProjectId" class="retro-input" placeholder="eco-rangers">
+        </div>
+        <div class="admin-form-group">
+          <label>Storage Bucket (storageBucket):</label>
+          <input type="text" id="fbStorageBucket" class="retro-input" placeholder="eco-rangers.appspot.com">
+        </div>
+        <div class="admin-form-group">
+          <label>Messaging Sender ID (messagingSenderId):</label>
+          <input type="text" id="fbMessagingSenderId" class="retro-input" placeholder="1234567890">
+        </div>
+        <div class="admin-form-group">
+          <label>App ID (appId):</label>
+          <input type="text" id="fbAppId" class="retro-input" placeholder="1:1234567890:web:abc123">
+        </div>
+
+        <div class="form-actions-row">
+          <button id="btnSaveFirebaseConfig" class="btn-retro btn-success">💾 SIMPAN & KONEKSIKAN FIREBASE</button>
+          <button id="btnDisconnectFirebase" class="btn-retro btn-danger">🔌 PUTUSKAN FIREBASE (OFFLINE MODE)</button>
         </div>
       </div>
 

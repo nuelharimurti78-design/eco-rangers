@@ -1,9 +1,10 @@
 /**
- * ECO-RANGERS: CORE GAME ENGINE & SYSTEM ARCHITECTURE (PATCH UPDATE)
- * Handles Game Loop, Canvas Renderer, Web Audio API 8-Bit Synthesizer,
+ * ECO-RANGERS: CORE GAME ENGINE & SYSTEM ARCHITECTURE
+ * Handles Game Loop, Canvas Renderer, Native Web Audio API 8-Bit Synthesizer,
  * Custom Uploaded Student Monster Images, Monster Creation & Editing,
  * Tamagotchi Hunger, AR Spawning, Quizzes, Eco-Dex Catalog, Leaderboard,
- * 2-Step QR Scanner, Audit Logs, JSON Export/Import, and Protected Admin Dashboard.
+ * 2-Step QR Scanner, Audit Logs, JSON Export/Import, Protected Admin Dashboard,
+ * and Google Firebase Cloud Backend (Realtime DB & Storage) with Hybrid LocalStorage Fallback.
  */
 
 (function () {
@@ -52,6 +53,203 @@
     hasSeenIntro: false
   };
 
+  // ==========================================================================
+  // HYBRID STORAGE & GOOGLE FIREBASE CLOUD BACKEND MANAGER
+  // ==========================================================================
+  const FirebaseManager = (function () {
+    let app = null;
+    let db = null;
+    let storage = null;
+    let isOnline = false;
+    let currentConfig = null;
+
+    function getConfigFromStorage() {
+      const raw = localStorage.getItem("ecoRangersFirebaseConfig");
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function init(config, onStatusChange) {
+      currentConfig = config || getConfigFromStorage();
+      const statusBadge = document.getElementById("cloudStatusBadge");
+      const statusText = document.getElementById("cloudStatusText");
+      const statusBox = document.getElementById("firebaseConnectionStatus");
+
+      if (!currentConfig || !currentConfig.apiKey || !window.firebase) {
+        isOnline = false;
+        if (statusBadge) {
+          statusBadge.className = "cloud-status-badge offline";
+          statusText.textContent = "OFFLINE";
+        }
+        if (statusBox) {
+          statusBox.textContent = "Status Koneksi: 📴 OFFLINE (LocalStorage Fallback Mode)";
+        }
+        if (onStatusChange) onStatusChange(false);
+        return false;
+      }
+
+      try {
+        if (!firebase.apps.length) {
+          app = firebase.initializeApp(currentConfig);
+        } else {
+          app = firebase.app();
+        }
+
+        db = firebase.database();
+        storage = firebase.storage();
+
+        // Listen to Realtime Database connection state
+        const connectedRef = db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+          if (snap.val() === true) {
+            isOnline = true;
+            if (statusBadge) {
+              statusBadge.className = "cloud-status-badge online";
+              statusText.textContent = "ONLINE";
+            }
+            if (statusBox) {
+              statusBox.textContent = "Status Koneksi: 🌐 ONLINE (Firebase Realtime DB Synced)";
+            }
+            if (onStatusChange) onStatusChange(true);
+          } else {
+            isOnline = false;
+            if (statusBadge) {
+              statusBadge.className = "cloud-status-badge offline";
+              statusText.textContent = "OFFLINE";
+            }
+            if (statusBox) {
+              statusBox.textContent = "Status Koneksi: 📴 TERPUTUS (LocalStorage Fallback Mode)";
+            }
+            if (onStatusChange) onStatusChange(false);
+          }
+        });
+
+        return true;
+      } catch (err) {
+        console.warn("Firebase Init Exception:", err);
+        isOnline = false;
+        if (statusBadge) {
+          statusBadge.className = "cloud-status-badge offline";
+          statusText.textContent = "OFFLINE";
+        }
+        if (statusBox) {
+          statusBox.textContent = "Status Koneksi: 📴 ERROR CONFIG (LocalStorage Mode)";
+        }
+        if (onStatusChange) onStatusChange(false);
+        return false;
+      }
+    }
+
+    function getIsOnline() {
+      return isOnline && db !== null;
+    }
+
+    function syncStateToCloud(state) {
+      if (!getIsOnline()) return;
+      try {
+        db.ref("ecoRangers/player").set(state.player);
+        db.ref("ecoRangers/inventory").set(state.inventory);
+        db.ref("ecoRangers/dailyScans").set(state.dailyScans);
+        db.ref("ecoRangers/ecoDex").set(state.ecoDex);
+        db.ref("ecoRangers/customMonsters").set(state.customMonsters);
+        db.ref("ecoRangers/quizBank").set(state.quizBank);
+        if (state.leaderboard) {
+          db.ref("ecoRangers/leaderboard").set(state.leaderboard);
+        }
+      } catch (e) {
+        console.warn("Firebase Cloud Sync Write Error:", e);
+      }
+    }
+
+    function uploadMonsterImage(monsterId, dataUrl, callback) {
+      if (!getIsOnline() || !storage || !dataUrl) {
+        callback(null);
+        return;
+      }
+
+      try {
+        const storageRef = storage.ref(`monsters/${monsterId}.png`);
+        storageRef.putString(dataUrl, "data_url").then((snapshot) => {
+          snapshot.ref.getDownloadURL().then((downloadUrl) => {
+            callback(downloadUrl);
+          }).catch(() => callback(null));
+        }).catch(() => callback(null));
+      } catch (e) {
+        callback(null);
+      }
+    }
+
+    function uploadScanProof(logId, dataUrl, callback) {
+      if (!getIsOnline() || !storage || !dataUrl) {
+        callback(null);
+        return;
+      }
+
+      try {
+        const storageRef = storage.ref(`scan_proofs/${logId}.jpg`);
+        storageRef.putString(dataUrl, "data_url").then((snapshot) => {
+          snapshot.ref.getDownloadURL().then((downloadUrl) => {
+            callback(downloadUrl);
+          }).catch(() => callback(null));
+        }).catch(() => callback(null));
+      } catch (e) {
+        callback(null);
+      }
+    }
+
+    function listenRealtimeCloudSync(state, onSyncUpdate) {
+      if (!getIsOnline()) return;
+
+      try {
+        // Realtime Leaderboard Sync across student devices
+        db.ref("ecoRangers/leaderboard").on("value", (snap) => {
+          const val = snap.val();
+          if (val) {
+            state.leaderboard = val;
+            localStorage.setItem("ecoRangersData", JSON.stringify(state));
+            if (onSyncUpdate) onSyncUpdate("leaderboard");
+          }
+        });
+
+        // Realtime Quiz Bank Sync
+        db.ref("ecoRangers/quizBank").on("value", (snap) => {
+          const val = snap.val();
+          if (val) {
+            state.quizBank = val;
+            localStorage.setItem("ecoRangersData", JSON.stringify(state));
+            if (onSyncUpdate) onSyncUpdate("quizBank");
+          }
+        });
+
+        // Realtime Custom Monsters Sync
+        db.ref("ecoRangers/customMonsters").on("value", (snap) => {
+          const val = snap.val();
+          if (val) {
+            state.customMonsters = val;
+            localStorage.setItem("ecoRangersData", JSON.stringify(state));
+            if (onSyncUpdate) onSyncUpdate("customMonsters");
+          }
+        });
+      } catch (e) {
+        console.warn("Realtime Cloud Listener Error:", e);
+      }
+    }
+
+    return {
+      init,
+      getConfigFromStorage,
+      getIsOnline,
+      syncStateToCloud,
+      uploadMonsterImage,
+      uploadScanProof,
+      listenRealtimeCloudSync
+    };
+  })();
+
   // NATIVE WEB AUDIO API SYNTHESIZER (NO EXTERNAL FILES REQUIRED)
   const SoundFX = (function () {
     let audioCtx = null;
@@ -69,7 +267,6 @@
       return audioCtx;
     }
 
-    // Sound 1: Beep QR Success (Short 880Hz sine wave)
     function playQrSuccess() {
       try {
         const ctx = getAudioContext();
@@ -87,7 +284,6 @@
       } catch (e) {}
     }
 
-    // Sound 2: Fanfare Level Up (Arpeggio C5 - E5 - G5 - C6)
     function playLevelUp() {
       try {
         const ctx = getAudioContext();
@@ -108,7 +304,6 @@
       } catch (e) {}
     }
 
-    // Sound 3: Wrong Answer / Monster Escaped (Descending Sawtooth 300Hz to 100Hz)
     function playEscape() {
       try {
         const ctx = getAudioContext();
@@ -127,7 +322,6 @@
       } catch (e) {}
     }
 
-    // Sound 4: Retro UI Click
     function playClick() {
       try {
         const ctx = getAudioContext();
@@ -260,6 +454,7 @@
   function saveState() {
     localStorage.setItem("ecoRangersData", JSON.stringify(state));
     updateHUD();
+    FirebaseManager.syncStateToCloud(state);
   }
 
   function getAllMonsters() {
@@ -820,7 +1015,7 @@
   }
 
   // ==========================================================================
-  // 8. ADMIN DASHBOARD, AUDIT LOGS & JSON EXPORT/IMPORT CONTROLLER
+  // 8. ADMIN DASHBOARD, AUDIT LOGS & FIREBASE HYBRID SETUP
   // ==========================================================================
   function resetMonsterForm() {
     editingMonsterId = null;
@@ -980,6 +1175,19 @@
     });
   }
 
+  function populateFirebaseConfigForm() {
+    const cfg = FirebaseManager.getConfigFromStorage();
+    if (cfg) {
+      if (document.getElementById("fbApiKey")) document.getElementById("fbApiKey").value = cfg.apiKey || "";
+      if (document.getElementById("fbAuthDomain")) document.getElementById("fbAuthDomain").value = cfg.authDomain || "";
+      if (document.getElementById("fbDatabaseUrl")) document.getElementById("fbDatabaseUrl").value = cfg.databaseURL || "";
+      if (document.getElementById("fbProjectId")) document.getElementById("fbProjectId").value = cfg.projectId || "";
+      if (document.getElementById("fbStorageBucket")) document.getElementById("fbStorageBucket").value = cfg.storageBucket || "";
+      if (document.getElementById("fbMessagingSenderId")) document.getElementById("fbMessagingSenderId").value = cfg.messagingSenderId || "";
+      if (document.getElementById("fbAppId")) document.getElementById("fbAppId").value = cfg.appId || "";
+    }
+  }
+
   function setupAdminPanel() {
     const btnAdminTrigger = document.getElementById("btnAdminTrigger");
     const btnAuthSubmit = document.getElementById("btnAuthSubmit");
@@ -997,6 +1205,9 @@
     const btnImportJsonTrigger = document.getElementById("btnImportJsonTrigger");
     const jsonFileInput = document.getElementById("jsonFileInput");
 
+    const btnSaveFirebaseConfig = document.getElementById("btnSaveFirebaseConfig");
+    const btnDisconnectFirebase = document.getElementById("btnDisconnectFirebase");
+
     btnAdminTrigger.onclick = () => {
       SoundFX.playClick();
       adminPinInput.value = "";
@@ -1010,6 +1221,7 @@
       if (pin === "admin123") {
         authModal.classList.add("hidden");
         adminModal.classList.remove("hidden");
+        populateFirebaseConfigForm();
         renderAdminScanLogs();
         renderAdminMonsterList();
         renderAdminQuizList();
@@ -1038,9 +1250,59 @@
           renderAdminScanLogs();
         } else if (tabId === "tabMonster") {
           renderAdminMonsterList();
+        } else if (tabId === "tabFirebase") {
+          populateFirebaseConfigForm();
         }
       };
     });
+
+    // FIREBASE CONFIGURATION SAVE & DISCONNECT HANDLERS
+    if (btnSaveFirebaseConfig) {
+      btnSaveFirebaseConfig.onclick = () => {
+        SoundFX.playClick();
+        const config = {
+          apiKey: document.getElementById("fbApiKey").value.trim(),
+          authDomain: document.getElementById("fbAuthDomain").value.trim(),
+          databaseURL: document.getElementById("fbDatabaseUrl").value.trim(),
+          projectId: document.getElementById("fbProjectId").value.trim(),
+          storageBucket: document.getElementById("fbStorageBucket").value.trim(),
+          messagingSenderId: document.getElementById("fbMessagingSenderId").value.trim(),
+          appId: document.getElementById("fbAppId").value.trim()
+        };
+
+        if (!config.apiKey || !config.databaseURL) {
+          alert("Lengkapi minimal apiKey dan databaseURL Firebase!");
+          return;
+        }
+
+        localStorage.setItem("ecoRangersFirebaseConfig", JSON.stringify(config));
+        const ok = FirebaseManager.init(config, (online) => {
+          if (online) {
+            FirebaseManager.syncStateToCloud(state);
+            FirebaseManager.listenRealtimeCloudSync(state, (topic) => {
+              if (topic === "leaderboard") renderLeaderboard();
+            });
+          }
+        });
+
+        if (ok) {
+          alert("💾 KREDENSIAL FIREBASE BERHASIL DISIMPAN & MEMULAI KONEKSI CLOUD!");
+        } else {
+          alert("⚠️ Gagal menginisialisasi Firebase. Periksa kredensial.");
+        }
+      };
+    }
+
+    if (btnDisconnectFirebase) {
+      btnDisconnectFirebase.onclick = () => {
+        SoundFX.playClick();
+        if (confirm("⚠️ Yakin memutuskan koneksi Firebase dan kembali ke mode LocalStorage Offline?")) {
+          localStorage.removeItem("ecoRangersFirebaseConfig");
+          alert("🔌 FIREBASE TERPUTUS. Mode offline LocalStorage aktif.");
+          location.reload();
+        }
+      };
+    }
 
     if (btnClearLogs) {
       btnClearLogs.onclick = () => {
@@ -1149,7 +1411,7 @@
       QREngine.generateAdminQr(cat, loc, display, downloadBtn);
     };
 
-    // 2. Tab Custom Monster Save / Update Form
+    // 2. Tab Custom Monster Save / Update Form (with Firebase Storage & LocalStorage Hybrid)
     document.getElementById("btnSaveMonster").onclick = () => {
       SoundFX.playClick();
       const name = document.getElementById("mInputName").value.trim();
@@ -1163,44 +1425,55 @@
         return;
       }
 
-      if (editingMonsterId) {
-        const idx = state.customMonsters.findIndex(m => m.id === editingMonsterId);
-        if (idx !== -1) {
-          state.customMonsters[idx].name = name;
-          state.customMonsters[idx].type = type;
-          state.customMonsters[idx].baseLevel = level;
-          state.customMonsters[idx].fact = fact || "Monster daur ulang karya siswa Adiwiyata!";
-          state.customMonsters[idx].color = color;
-          if (currentCustomSpriteDataUrl) {
-            state.customMonsters[idx].spriteDataUrl = currentCustomSpriteDataUrl;
-            delete imageCache[editingMonsterId];
+      const targetId = editingMonsterId || `custom_monster_${Date.now()}`;
+
+      function finishSaveMonster(finalSpriteUrl) {
+        if (editingMonsterId) {
+          const idx = state.customMonsters.findIndex(m => m.id === editingMonsterId);
+          if (idx !== -1) {
+            state.customMonsters[idx].name = name;
+            state.customMonsters[idx].type = type;
+            state.customMonsters[idx].baseLevel = level;
+            state.customMonsters[idx].fact = fact || "Monster daur ulang karya siswa Adiwiyata!";
+            state.customMonsters[idx].color = color;
+            if (finalSpriteUrl) {
+              state.customMonsters[idx].spriteDataUrl = finalSpriteUrl;
+              delete imageCache[editingMonsterId];
+            }
+            alert(`✅ Monster "${name}" Berhasil Di-update!`);
           }
+        } else {
+          const newMonster = {
+            id: targetId,
+            name: name,
+            type: type,
+            baseLevel: level,
+            color: color,
+            fact: fact || "Monster daur ulang karya siswa Adiwiyata!",
+            spriteDataUrl: finalSpriteUrl || currentCustomSpriteDataUrl || null
+          };
 
-          alert(`✅ Monster "${name}" Berhasil Di-update!`);
-        }
-      } else {
-        const newId = `custom_monster_${Date.now()}`;
-        const newMonster = {
-          id: newId,
-          name: name,
-          type: type,
-          baseLevel: level,
-          color: color,
-          fact: fact || "Monster daur ulang karya siswa Adiwiyata!",
-          spriteDataUrl: currentCustomSpriteDataUrl || null
-        };
-
-        state.customMonsters.push(newMonster);
-        if (!state.ecoDex.includes(newId)) {
-          state.ecoDex.push(newId);
+          state.customMonsters.push(newMonster);
+          if (!state.ecoDex.includes(targetId)) {
+            state.ecoDex.push(targetId);
+          }
+          alert(`✅ Monster Baru "${name}" Berhasil Disimpan ke Eco-Dex!`);
         }
 
-        alert(`✅ Monster Baru "${name}" Berhasil Disimpan ke Eco-Dex!`);
+        saveState();
+        resetMonsterForm();
+        renderAdminMonsterList();
       }
 
-      saveState();
-      resetMonsterForm();
-      renderAdminMonsterList();
+      // Check if online and custom image uploaded -> Upload to Firebase Storage
+      if (currentCustomSpriteDataUrl && FirebaseManager.getIsOnline()) {
+        showNotification("☁️ MENGUNGGAH SPRITE KE FIREBASE STORAGE...");
+        FirebaseManager.uploadMonsterImage(targetId, currentCustomSpriteDataUrl, (cloudUrl) => {
+          finishSaveMonster(cloudUrl || currentCustomSpriteDataUrl);
+        });
+      } else {
+        finishSaveMonster(currentCustomSpriteDataUrl);
+      }
     };
 
     // 3. Tab Quiz Bank
@@ -1451,10 +1724,20 @@
         const antiCheat = QREngine.processDailyScanAntiCheat(state, currentWasteSnapshotUrl, parsed.category);
 
         state.inventory[parsed.itemKey] = (state.inventory[parsed.itemKey] || 0) + 1;
-
         saveState();
 
-        alert(`✅ FOTO BUKTI & QR TONG SAMPAH DIVERIFIKASI!\n\nItem Diterima: ${parsed.name}\nStatus Scan: ${antiCheat.tierText}\nBukti foto fisik telah tersimpan ke Log Admin.`);
+        // If online, upload waste photo proof to Firebase Storage
+        if (currentWasteSnapshotUrl && FirebaseManager.getIsOnline()) {
+          const logEntry = antiCheat.logEntry;
+          FirebaseManager.uploadScanProof(logEntry.id, currentWasteSnapshotUrl, (cloudPhotoUrl) => {
+            if (cloudPhotoUrl) {
+              logEntry.photo = cloudPhotoUrl;
+              saveState();
+            }
+          });
+        }
+
+        alert(`✅ FOTO BUKTI & QR TONG SAMPAH DIVERIFIKASI!\n\nItem Diterima: ${parsed.name}\nStatus Scan: ${antiCheat.tierText}\nBukti foto fisik telah tersimpan ke Cloud / Admin.`);
 
         qrModal.classList.add("hidden");
         showNotification(`🍖 MENDAPATKAN ${parsed.name.toUpperCase()}!`);
@@ -1522,6 +1805,16 @@
     runIntroBootSequence();
     updateHUD();
     updateSpeechBubble();
+
+    // Initialize Firebase Manager & Realtime Cloud Listeners
+    FirebaseManager.init(null, (isOnline) => {
+      if (isOnline) {
+        FirebaseManager.syncStateToCloud(state);
+        FirebaseManager.listenRealtimeCloudSync(state, (topic) => {
+          if (topic === "leaderboard") renderLeaderboard();
+        });
+      }
+    });
 
     requestAnimationFrame(gameLoop);
   }

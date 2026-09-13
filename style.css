@@ -229,6 +229,46 @@ html, body {
   text-align: right;
 }
 
+.hud-right-actions {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cloud-status-badge {
+  font-size: 6px;
+  padding: 3px 5px;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #aaa;
+}
+
+.cloud-status-badge.online {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.cloud-status-badge.online .status-dot {
+  background: var(--color-green);
+  box-shadow: 0 0 4px var(--color-green);
+}
+
+.cloud-status-badge.offline .status-dot {
+  background: #666;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* SECRET ADMIN BUTTON */
 .btn-secret {
   pointer-events: auto;
