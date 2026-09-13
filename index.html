@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Eco-Rangers: Retro Adiwiyata Game</title>
+  <!-- Retro Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- External CDN Library: jsQR for QR Code Scanning -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- External CDN Library: QRCode.js for Admin QR Code Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body class="crt-overlay">
+
+  <!-- MAIN SPA WRAPPER -->
+  <div id="appContainer">
+
+    <!-- LAYER 1: WEBCAM VIDEO FEED (BACKGROUND AR) -->
+    <video id="webcam" autoplay playsinline muted class="camera-feed"></video>
+    <div id="cameraFallback" class="camera-fallback hidden">
+      <span>📷 KAMERA NON-AKTIF</span>
+      <small>Menggunakan Latar Retro Digital</small>
+    </div>
+
+    <!-- LAYER 2: 2D GAME CANVAS -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- LAYER 3: CRT SCANLINE & FRAME OVERLAY -->
+    <div class="crt-scanlines"></div>
+    <div class="nes-screen-frame"></div>
+
+    <!-- LAYER 3 (TOP HUD): STATUS BARS & SPEECH BUBBLE -->
+    <header id="hudHeader" class="hud-layer">
+      <div class="hud-top-bar">
+        <!-- Partner Monster Info -->
+        <div class="monster-badge retro-box">
+          <div class="badge-icon" id="hudMonsterAvatar">👾</div>
+          <div class="badge-details">
+            <div class="badge-title">
+              <span id="hudMonsterName">ORGANIK SLIME</span>
+              <span id="hudMonsterLevel" class="level-pill">LV.1</span>
+            </div>
+            <!-- EXP Bar -->
+            <div class="bar-container">
+              <span class="bar-label">EXP</span>
+              <div class="progress-bar exp-bar">
+                <div id="hudExpFill" class="progress-fill" style="width: 0%;"></div>
+              </div>
+              <span id="hudExpText" class="bar-num">0/100</span>
+            </div>
+            <!-- Hunger Bar -->
+            <div class="bar-container">
+              <span class="bar-label">LAPAR</span>
+              <div class="progress-bar hunger-bar">
+                <div id="hudHungerFill" class="progress-fill" style="width: 100%;"></div>
+              </div>
+              <span id="hudHungerText" class="bar-num">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Secret Admin Button -->
+        <button id="btnAdminTrigger" class="btn-retro btn-secret" title="Panel Admin">🔑</button>
+      </div>
+
+      <!-- Dynamic Micro-Dialogue Speech Bubble -->
+      <div id="speechBubble" class="speech-bubble retro-box">
+        <p id="speechText">Haloo Ranger! Ayo pilah sampah di sekolah hari ini!</p>
+      </div>
+    </header>
+
+    <!-- CENTER AR TARGET / NOTIFICATION BANNER -->
+    <div id="gameNotification" class="game-notification hidden">
+      <span id="notificationText">MONSTER LIAR MUNCUL!</span>
+    </div>
+
+    <!-- LAYER 4: BOTTOM NAVIGATION DOCK -->
+    <nav id="bottomNav" class="nav-dock">
+      <button id="btnNavScan" class="btn-nav btn-retro">
+        <span class="icon">📷</span>
+        <span class="label">SCAN QR</span>
+      </button>
+      <button id="btnNavFeed" class="btn-nav btn-retro">
+        <span class="icon">🍖</span>
+        <span class="label">FEED</span>
+      </button>
+      <button id="btnNavHunt" class="btn-nav btn-retro active">
+        <span class="icon">🎯</span>
+        <span class="label">HUNT</span>
+      </button>
+      <button id="btnNavDex" class="btn-nav btn-retro">
+        <span class="icon">📕</span>
+        <span class="label">ECO-DEX</span>
+      </button>
+      <button id="btnNavRank" class="btn-nav btn-retro">
+        <span class="icon">🏆</span>
+        <span class="label">RANK</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== MODALS & OVERLAYS ==================== -->
+
+  <!-- 1. PROLOG INTRO BOOT-UP OVERLAY -->
+  <div id="introModal" class="modal-overlay retro-modal">
+    <div class="intro-box retro-box">
+      <div class="terminal-header">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+        <span class="title">ECO-DETECTOR OS v1.0</span>
+      </div>
+      <div class="terminal-body">
+        <p id="typewriterText" class="typewriter-content"></p>
+      </div>
+      <button id="btnStartGame" class="btn-retro btn-start hidden">[ PRESS START ]</button>
+    </div>
+  </div>
+
+  <!-- 2. QR SCANNER MODAL (2-STEP WORKFLOW) -->
+  <div id="qrModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box">
+      <div class="modal-header">
+        <h2>📷 SCANNER TONG SAMPAH</h2>
+        <button class="btn-close closeModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+
+        <!-- STEP 1: FOTO SAMPAH FISIK -->
+        <div id="qrStep1Container" class="qr-step-container">
+          <div class="step-badge">LANGKAH 1 DARI 2: FOTO BUKTI SAMPAH</div>
+          <p class="desc mt-10">Arahkan kamera ke sampah fisik yang Anda pilah sebagai bukti fisik sebelum scan QR.</p>
+          <div class="snapshot-preview-area">
+            <canvas id="trashSnapshotCanvas" class="snapshot-canvas hidden"></canvas>
+            <div id="trashSnapshotPlaceholder" class="snapshot-placeholder">
+              <span>📸 SIAP MENGAMBIL FOTO SAMPAH</span>
+            </div>
+          </div>
+          <button id="btnTakeTrashPhoto" class="btn-retro btn-primary mt-10">📸 AMBIL FOTO SAMPAH</button>
+        </div>
+
+        <!-- STEP 2: SCAN QR TONG SAMPAH -->
+        <div id="qrStep2Container" class="qr-step-container hidden">
+          <div class="step-badge step-active">LANGKAH 2 DARI 2: SCAN QR TONG SAMPAH</div>
+          
+          <!-- Locked Photo Proof Preview Thumbnail -->
+          <div class="proof-locked-box retro-box mt-10">
+            <span class="locked-icon">🔒 BUKTI FOTO TERKUNCI:</span>
+            <div id="proofThumbnailContainer" class="proof-thumb-container"></div>
+          </div>
+
+          <p class="desc mt-10">Sekarang arahkan kamera ke QR Code Tong Sampah Adiwiyata (Organik / Anorganik / Botol)</p>
+          <div class="qr-viewport-container">
+            <canvas id="qrScanCanvas" class="qr-canvas"></canvas>
+            <div class="scan-laser"></div>
+          </div>
+          <div id="qrStatus" class="qr-status-box retro-box">Menunggu QR Code...</div>
+          <button id="btnRetakePhoto" class="btn-retro btn-secondary mt-10">🔄 AMBIL ULANG FOTO SAMPAH</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. FEED MODAL -->
+  <div id="feedModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box">
+      <div class="modal-header">
+        <h2>🍖 ECO-FOOD INVENTORY</h2>
+        <button class="btn-close closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="desc">Beri makan partner monstermu dengan Eco-Food hasil pemindaian QR!</p>
+        <div id="foodInventoryGrid" class="inventory-grid">
+          <!-- Food items populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. AR QUIZ CATCHING MODAL -->
+  <div id="quizModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box quiz-card">
+      <div class="quiz-badge">🎯 QUIZ ADIWIYATA</div>
+      <h3 id="quizQuestion" class="quiz-question">Pertanyaan Kuis Adiwiyata...</h3>
+      <div id="quizOptions" class="quiz-options">
+        <!-- Quiz options buttons added dynamically -->
+      </div>
+      <div id="quizFeedback" class="quiz-feedback hidden"></div>
+    </div>
+  </div>
+
+  <!-- 5. ECO-DEX CATALOG MODAL -->
+  <div id="dexModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box dex-card">
+      <div class="modal-header">
+        <h2>📕 ECO-DEX KATALOG</h2>
+        <button class="btn-close closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="dexGrid" class="dex-grid-3x3">
+          <!-- 3x3 Grid loaded dynamically -->
+        </div>
+        <!-- Detail Panel -->
+        <div id="dexDetailPanel" class="dex-detail retro-box hidden">
+          <h3 id="dexDetailName">Nama Monster</h3>
+          <p id="dexDetailType" class="dex-type">Tipe: Organik</p>
+          <p id="dexDetailFact" class="dex-fact">Fakta edukasi Adiwiyata...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. LEADERBOARD RANK MODAL -->
+  <div id="rankModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box">
+      <div class="modal-header">
+        <h2>🏆 LEADERBOARD ADIWIYATA</h2>
+        <button class="btn-close closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="desc">Peringkat Poin Kebersihan & Bank Sampah Per Kelas</p>
+        <ul id="leaderboardList" class="rank-list">
+          <!-- Populated by JS -->
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. AUTHENTICATION PIN MODAL -->
+  <div id="authModal" class="modal-overlay hidden">
+    <div class="modal-card retro-box auth-card">
+      <div class="modal-header">
+        <h2>🔑 AKSES PANEL ADMIN</h2>
+        <button class="btn-close closeModal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <p>Masukkan PIN / Password Admin:</p>
+        <input type="password" id="adminPinInput" class="retro-input" placeholder="Password Admin" autocomplete="off">
+        <div id="authError" class="error-msg hidden">PIN Salah! Coba lagi.</div>
+        <button id="btnAuthSubmit" class="btn-retro btn-primary mt-10">MASUK ADMIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. PROTECTED FULLSCREEN ADMIN DASHBOARD -->
+  <div id="adminModal" class="modal-overlay admin-fullscreen hidden">
+    <div class="admin-dashboard retro-box">
+      <div class="admin-top-bar">
+        <h2>⚙️ PANEL ADMIN ECO-RANGERS</h2>
+        <button id="btnAdminExit" class="btn-retro btn-danger">✖ KELUAR</button>
+      </div>
+
+      <!-- Admin Tabs Navigation -->
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="tabQr">🔲 QR Generator</button>
+        <button class="tab-btn" data-tab="tabLogs">📋 Log Bukti Scan</button>
+        <button class="tab-btn" data-tab="tabMonster">👾 Input/Edit Monster</button>
+        <button class="tab-btn" data-tab="tabQuiz">❓ Bank Soal</button>
+        <button class="tab-btn" data-tab="tabRank">🏆 Leaderboard</button>
+        <button class="tab-btn" data-tab="tabDemo">⚡ Demo Suite</button>
+      </div>
+
+      <!-- Tab Content 1: QR Generator -->
+      <div id="tabQr" class="tab-content active">
+        <h3>🔲 DOKUMEN GENERATOR QR TONG SAMPAH</h3>
+        <div class="admin-form-group">
+          <label>Kategori Sampah Adiwiyata:</label>
+          <select id="qrSelectCategory" class="retro-input">
+            <option value="ORGANIC">Organik (Sisa Makanan, Daun)</option>
+            <option value="PLASTIC">Anorganik (Plastik, Wrappers)</option>
+            <option value="BOTTLE">Botol & Kaleng (Wadah Minuman)</option>
+          </select>
+        </div>
+        <div class="admin-form-group">
+          <label>Nama Lokasi Tong Sampah:</label>
+          <input type="text" id="qrInputLocation" class="retro-input" placeholder="Contoh: Depan Kantin 7A">
+        </div>
+        <button id="btnGenerateQr" class="btn-retro btn-primary">GENERATE QR CODE</button>
+        
+        <div class="qr-output-area text-center mt-15">
+          <div id="adminQrDisplay" class="admin-qr-box"></div>
+          <a id="btnDownloadQr" class="btn-retro btn-success hidden mt-10" download="QR_Tong_Sampah.png">💾 DOWNLOAD QR CODE PNG</a>
+        </div>
+      </div>
+
+      <!-- Tab Content 1.5: Scan Proof Logs -->
+      <div id="tabLogs" class="tab-content">
+        <h3>📋 LOG BUKTI FOTO SAMPAH & SCAN HARIAN</h3>
+        <p class="desc">Rekapitulasi bukti fisik foto pemilahan sampah dan status anti-cheat yang tersimpan di localStorage:</p>
+        <div id="adminScanLogsList" class="scan-logs-grid">
+          <!-- Dynamically populated scan logs -->
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Input & Edit Custom Monster -->
+      <div id="tabMonster" class="tab-content">
+        <h3 id="monsterFormTitle">👾 TAMBAH MONSTER ADIWIYATA KARYA SISWA</h3>
+        <div class="admin-form-group">
+          <label>Nama Monster:</label>
+          <input type="text" id="mInputName" class="retro-input" placeholder="Contoh: Plastic Golem">
+        </div>
+        <div class="admin-form-group">
+          <label>Tipe Trash Monster:</label>
+          <select id="mInputType" class="retro-input">
+            <option value="ORGANIC">Organik</option>
+            <option value="PLASTIC">Anorganik / Plastik</option>
+            <option value="BOTTLE">Botol & Kaleng</option>
+          </select>
+        </div>
+        <div class="admin-form-group">
+          <label>Base Level:</label>
+          <input type="number" id="mInputLevel" class="retro-input" value="1" min="1" max="50">
+        </div>
+        <div class="admin-form-group">
+          <label>Upload Gambar / Sprite Pixel Monster (PNG/JPG):</label>
+          <input type="file" id="mInputImage" class="retro-input" accept="image/*">
+          <div id="mImagePreviewContainer" class="mt-10 hidden">
+            <small class="desc" style="display:block;">Preview Pixel Sprite Karya Siswa:</small>
+            <canvas id="mImagePreviewCanvas" style="width:64px; height:64px; border:2px solid var(--color-cyan); background:#000; image-rendering:pixelated;"></canvas>
+          </div>
+        </div>
+        <div class="admin-form-group">
+          <label>Fakta Edukasi Adiwiyata:</label>
+          <textarea id="mInputFact" class="retro-input" placeholder="Fakta unik sampah ini..."></textarea>
+        </div>
+        <div class="admin-form-group">
+          <label>Warna Sprite Main Pixel (Hex - Opsional):</label>
+          <input type="color" id="mInputColor" class="retro-input" value="#39ff14">
+        </div>
+        
+        <div class="form-actions-row">
+          <button id="btnSaveMonster" class="btn-retro btn-primary">SIMPAN MONSTER KE ECO-DEX</button>
+          <button id="btnCancelEditMonster" class="btn-retro btn-secondary hidden">✖ BATAL EDIT</button>
+        </div>
+
+        <h4 class="mt-15">Daftar Monster Karya Siswa:</h4>
+        <ul id="adminMonsterList" class="quiz-admin-list">
+          <!-- Dynamically populated custom monsters list -->
+        </ul>
+      </div>
+
+      <!-- Tab Content 3: Bank Soal Kuis -->
+      <div id="tabQuiz" class="tab-content">
+        <h3>❓ KELOLA BANK SOAL KUIS ADIWIYATA</h3>
+        <div class="admin-form-group">
+          <label>Pertanyaan Kuis Baru:</label>
+          <input type="text" id="qInputQuestion" class="retro-input" placeholder="Pertanyaan lingkungan...">
+        </div>
+        <div class="admin-form-group">
+          <label>Pilihan A:</label>
+          <input type="text" id="qInputOpt0" class="retro-input" placeholder="Opsi 1">
+        </div>
+        <div class="admin-form-group">
+          <label>Pilihan B:</label>
+          <input type="text" id="qInputOpt1" class="retro-input" placeholder="Opsi 2">
+        </div>
+        <div class="admin-form-group">
+          <label>Pilihan C:</label>
+          <input type="text" id="qInputOpt2" class="retro-input" placeholder="Opsi 3">
+        </div>
+        <div class="admin-form-group">
+          <label>Kunci Jawaban Benar:</label>
+          <select id="qInputAnswer" class="retro-input">
+            <option value="0">Pilihan A</option>
+            <option value="1">Pilihan B</option>
+            <option value="2">Pilihan C</option>
+          </select>
+        </div>
+        <button id="btnAddQuiz" class="btn-retro btn-primary">TAMBAH SOAL KUIS</button>
+
+        <h4 class="mt-15">Daftar Soal Aktif:</h4>
+        <ul id="adminQuizList" class="quiz-admin-list">
+          <!-- Quiz list items dynamically populated -->
+        </ul>
+      </div>
+
+      <!-- Tab Content 4: Leaderboard Management -->
+      <div id="tabRank" class="tab-content">
+        <h3>🏆 KELOLA POIN LEADERBOARD KELAS</h3>
+        <div class="admin-form-group">
+          <label>Nama Kelas:</label>
+          <input type="text" id="rInputClass" class="retro-input" placeholder="Contoh: Kelas 7A">
+        </div>
+        <div class="admin-form-group">
+          <label>Poin Kebersihan Tambahan (+/-):</label>
+          <input type="number" id="rInputPoints" class="retro-input" value="100">
+        </div>
+        <button id="btnUpdateRank" class="btn-retro btn-primary">UPDATE POIN KELAS</button>
+
+        <h4 class="mt-15">Tabel Poin Saat Ini:</h4>
+        <div id="adminRankTable" class="admin-rank-table"></div>
+      </div>
+
+      <!-- Tab Content 5: Presentation & Demo Suite (Krenova Test Suite) -->
+      <div id="tabDemo" class="tab-content">
+        <h3>⚡ KRENOVA PRESENTATION & DEMO SUITE</h3>
+        <p class="desc">Tombol pintas pengujian langsung untuk presentasi juri lomba Krenova & Adiwiyata:</p>
+        <div class="demo-suite-grid">
+          <button id="btnDemoSpawn" class="btn-retro btn-demo btn-warning">
+            <span>⚡ FORCE SPAWN MONSTER</span>
+            <small>Memaksa Monster Liar Muncul Seketika di AR</small>
+          </button>
+          <button id="btnDemoLevelUp" class="btn-retro btn-demo btn-success">
+            <span>🚀 INSTANT LEVEL UP</span>
+            <small>Tambah +1000 EXP Instan ke Partner Monster</small>
+          </button>
+          <button id="btnDemoResetScan" class="btn-retro btn-demo btn-danger">
+            <span>🔄 RESET SCAN HARIAN</span>
+            <small>Reset Kuota Anti-Cheat Scan ke 0 Hari Ini</small>
+          </button>
+          <button id="btnDemoResetAll" class="btn-retro btn-demo btn-secondary">
+            <span>⚠️ RESET ALL GAME DATA</span>
+            <small>Kembalikan Storage ke Inisial JSON</small>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JavaScript Application Entry Points -->
+  <script src="qr-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
