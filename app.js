@@ -110,8 +110,17 @@
           app = firebase.app();
         }
 
-        db = firebase.database();
-        storage = firebase.storage();
+        if (currentConfig.databaseURL) {
+          try {
+            db = app.database(currentConfig.databaseURL);
+          } catch (e) {
+            db = app.database();
+          }
+        } else {
+          db = app.database();
+        }
+
+        storage = app.storage();
 
         // Listen to Realtime Database connection state
         const connectedRef = db.ref(".info/connected");
@@ -133,7 +142,7 @@
               statusText.textContent = "OFFLINE";
             }
             if (statusBox) {
-              statusBox.textContent = "Status Koneksi: 📴 TERPUTUS (LocalStorage Fallback Mode)";
+              statusBox.innerHTML = `Status Koneksi: 📴 TERPUTUS (LocalStorage Mode)<br><small style="font-size:7px; color:#ffaa00;">💡 Pastikan Realtime DB sudah dibuat di Console Firebase & Rules read/write = true</small>`;
             }
             if (onStatusChange) onStatusChange(false);
           }
@@ -148,7 +157,7 @@
           statusText.textContent = "OFFLINE";
         }
         if (statusBox) {
-          statusBox.textContent = "Status Koneksi: 📴 ERROR CONFIG (LocalStorage Mode)";
+          statusBox.innerHTML = `Status Koneksi: ⚠️ ERROR (${err.message || "Init Error"})`;
         }
         if (onStatusChange) onStatusChange(false);
         return false;
