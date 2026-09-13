@@ -1,8 +1,9 @@
 /**
- * ECO-RANGERS: CORE GAME ENGINE & SYSTEM ARCHITECTURE
- * Handles Game Loop, Canvas Renderer, Custom Uploaded Student Monster Images,
- * Monster Creation & Editing, Tamagotchi Hunger, AR Spawning, Quizzes,
- * Eco-Dex Catalog, Leaderboard, 2-Step QR Scanner, and Protected Admin Dashboard.
+ * ECO-RANGERS: CORE GAME ENGINE & SYSTEM ARCHITECTURE (PATCH UPDATE)
+ * Handles Game Loop, Canvas Renderer, Web Audio API 8-Bit Synthesizer,
+ * Custom Uploaded Student Monster Images, Monster Creation & Editing,
+ * Tamagotchi Hunger, AR Spawning, Quizzes, Eco-Dex Catalog, Leaderboard,
+ * 2-Step QR Scanner, Audit Logs, JSON Export/Import, and Protected Admin Dashboard.
  */
 
 (function () {
@@ -51,6 +52,107 @@
     hasSeenIntro: false
   };
 
+  // NATIVE WEB AUDIO API SYNTHESIZER (NO EXTERNAL FILES REQUIRED)
+  const SoundFX = (function () {
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtxClass) {
+          audioCtx = new AudioCtxClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    // Sound 1: Beep QR Success (Short 880Hz sine wave)
+    function playQrSuccess() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch (e) {}
+    }
+
+    // Sound 2: Fanfare Level Up (Arpeggio C5 - E5 - G5 - C6)
+    function playLevelUp() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.12);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.08);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.12);
+        });
+      } catch (e) {}
+    }
+
+    // Sound 3: Wrong Answer / Monster Escaped (Descending Sawtooth 300Hz to 100Hz)
+    function playEscape() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(300, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch (e) {}
+    }
+
+    // Sound 4: Retro UI Click
+    function playClick() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    return {
+      playQrSuccess,
+      playLevelUp,
+      playEscape,
+      playClick
+    };
+  })();
+
   // MONSTER BASE DATABASE & EDU FACTS
   const BUILTIN_MONSTERS = {
     "slime_organik_01": {
@@ -90,7 +192,7 @@
 
   // GAME ENGINE STATE
   let state = null;
-  let activeTab = "HUNT"; // HUNT, SCAN, FEED, DEX, RANK
+  let activeTab = "HUNT";
   let wildMonster = null;
   let wildSpawnTimer = null;
   let hungerTimer = null;
@@ -98,8 +200,8 @@
   let currentQuiz = null;
   let currentWasteSnapshotUrl = null;
   let currentCustomSpriteDataUrl = null;
-  let editingMonsterId = null; // ID of monster currently being edited
-  const imageCache = {}; // Cache for loaded HTML Image elements
+  let editingMonsterId = null;
+  const imageCache = {};
 
   // DOM ELEMENTS
   const canvas = document.getElementById("gameCanvas");
@@ -176,7 +278,7 @@
   }
 
   // ==========================================================================
-  // 2. CAMERA INITIALIZATION (REAR CAMERA ENVIRONMENT)
+  // 2. CAMERA INITIALIZATION
   // ==========================================================================
   function initCamera() {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -203,7 +305,7 @@
   }
 
   // ==========================================================================
-  // 3. CANVAS 2D GAME LOOP & PROCEDURAL / IMAGE SPRITE RENDERER
+  // 3. CANVAS 2D GAME LOOP & SPRITE RENDERER
   // ==========================================================================
   function resizeCanvas() {
     canvas.width = canvas.clientWidth || window.innerWidth;
@@ -230,7 +332,6 @@
     ctx.restore();
   }
 
-  // 16x16 Matrices for Built-in 8-bit Monsters
   const MATRIX_SLIME = [
     [0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0],
     [0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
@@ -294,9 +395,6 @@
     return MATRIX_SLIME;
   }
 
-  /**
-   * Universal Monster Renderer: Supports both 8-Bit Procedural Matrix & Uploaded Custom Image Sprites
-   */
   function renderMonsterOnCanvas(targetCtx, x, y, width, height, monsterObj, pixelSize) {
     if (monsterObj.spriteDataUrl) {
       let img = imageCache[monsterObj.id];
@@ -319,7 +417,6 @@
     }
   }
 
-  // GAME LOOP RENDERER
   function gameLoop(time) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -329,21 +426,18 @@
     const spriteWidth = 16 * pixelSize;
     const spriteHeight = 16 * pixelSize;
 
-    // Bounce Animation
     const bounceY = Math.sin(time / 300) * 10;
     const partnerX = (canvas.width - spriteWidth) / 2;
     const partnerY = (canvas.height - spriteHeight) / 2 + 30 + bounceY;
 
-    // Draw Shadow under partner
     ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
     ctx.beginPath();
     ctx.ellipse(canvas.width / 2, partnerY + spriteHeight - 5, spriteWidth / 2, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Render Partner Monster
     renderMonsterOnCanvas(ctx, partnerX, partnerY, spriteWidth, spriteHeight, partner, pixelSize);
 
-    // 2. RENDER AR WILD MONSTER (IF SPAWNED IN HUNT MODE)
+    // 2. RENDER AR WILD MONSTER (IF SPAWNED)
     if (wildMonster) {
       const wildObj = getAllMonsters()[wildMonster.id] || BUILTIN_MONSTERS["slime_organik_01"];
       const wildPixelSize = Math.floor(pixelSize * 0.85);
@@ -354,17 +448,14 @@
       const wx = wildMonster.x;
       const wy = wildMonster.y + wildFloat;
 
-      // Draw Target Radar Pulse ring around wild monster
       ctx.strokeStyle = "#ff3366";
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(wx + wildW / 2, wy + wildH / 2, wildW * 0.85 + Math.sin(time / 150) * 4, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Render Wild Monster
       renderMonsterOnCanvas(ctx, wx, wy, wildW, wildH, wildObj, wildPixelSize);
 
-      // Level Label over Wild Monster
       ctx.fillStyle = "#ffee00";
       ctx.font = "10px 'Press Start 2P', monospace";
       ctx.fillText(`LV.${wildMonster.level}`, wx, wy - 8);
@@ -375,7 +466,6 @@
     animationFrameId = requestAnimationFrame(gameLoop);
   }
 
-  // TAP / TOUCH CANVAS TO CATCH WILD MONSTER
   canvas.addEventListener("pointerdown", function (e) {
     if (!wildMonster || !wildMonster.bounds) return;
 
@@ -386,12 +476,13 @@
     const b = wildMonster.bounds;
     if (touchX >= b.x - 15 && touchX <= b.x + b.width + 15 &&
         touchY >= b.y - 15 && touchY <= b.y + b.height + 15) {
+      SoundFX.playClick();
       triggerARQuiz();
     }
   });
 
   // ==========================================================================
-  // 4. TAMAGOTCHI HUNGER & SPEECH BUBBLE LOGIC
+  // 4. HUNGER & SPEECH BUBBLE LOGIC
   // ==========================================================================
   function startHungerInterval() {
     if (hungerTimer) clearInterval(hungerTimer);
@@ -450,6 +541,7 @@
     if (state.player.exp >= requiredExp) {
       state.player.level += 1;
       state.player.exp -= requiredExp;
+      SoundFX.playLevelUp();
       showNotification(`🎉 LEVEL UP! ${getActiveMonsterObj().name} SEKARANG LEVEL ${state.player.level}!`);
       updateSpeechBubble(`Horeee! Naik level ke Lv.${state.player.level}! Semakin kuat!`);
     }
@@ -466,7 +558,7 @@
   }
 
   // ==========================================================================
-  // 5. AR HUNTING SPAWN CONTROLLER & ADIWIYATA QUIZ
+  // 5. AR HUNTING SPAWN CONTROLLER & QUIZ
   // ==========================================================================
   function startARHuntingSpawns() {
     if (wildSpawnTimer) clearInterval(wildSpawnTimer);
@@ -511,7 +603,10 @@
       const btn = document.createElement("button");
       btn.className = "btn-retro quiz-opt-btn";
       btn.textContent = `${String.fromCharCode(65 + index)}. ${optText}`;
-      btn.onclick = () => evaluateQuizAnswer(index);
+      btn.onclick = () => {
+        SoundFX.playClick();
+        evaluateQuizAnswer(index);
+      };
       quizOptionsEl.appendChild(btn);
     });
 
@@ -526,6 +621,7 @@
     quizFeedbackEl.classList.remove("hidden");
 
     if (!isCorrect) {
+      SoundFX.playEscape();
       quizFeedbackEl.style.color = "var(--color-red)";
       quizFeedbackEl.textContent = `❌ JAWABAN SALAH! ${wildObj.name} KAGET DAN KABUR!`;
       
@@ -547,6 +643,7 @@
       quizModal.classList.add("hidden");
 
       if (isCaught) {
+        SoundFX.playLevelUp();
         if (!state.ecoDex.includes(wildMonster.id)) {
           state.ecoDex.push(wildMonster.id);
         }
@@ -554,6 +651,7 @@
         addPlayerEXP(50);
         updateSpeechBubble(`Mantap! ${wildObj.name} berhasil dinetralkan & didaftarkan ke Eco-Dex!`);
       } else {
+        SoundFX.playEscape();
         showNotification(`💨 LEVEL MONSTER LEBIH TINGGI (${wildLvl})! MONSTER BERHASIL LOLOS!`);
         updateSpeechBubble(`Sayang sekali monster terlalu lincah! Tingkatkan Level monstermu!`);
       }
@@ -585,7 +683,10 @@
         <div class="food-count">${count} STOK</div>
       `;
 
-      card.onclick = () => feedActiveMonster(item);
+      card.onclick = () => {
+        SoundFX.playClick();
+        feedActiveMonster(item);
+      };
       grid.appendChild(card);
     });
   }
@@ -660,6 +761,7 @@
 
         if (isUnlocked) {
           slot.onclick = () => {
+            SoundFX.playClick();
             document.querySelectorAll(".dex-item").forEach(el => el.classList.remove("active-selected"));
             slot.classList.add("active-selected");
 
@@ -718,7 +820,7 @@
   }
 
   // ==========================================================================
-  // 8. ADMIN DASHBOARD & CUSTOM MONSTER INPUT / EDIT CONTROLLER
+  // 8. ADMIN DASHBOARD, AUDIT LOGS & JSON EXPORT/IMPORT CONTROLLER
   // ==========================================================================
   function resetMonsterForm() {
     editingMonsterId = null;
@@ -769,19 +871,23 @@
 
       const btnGroup = document.createElement("div");
 
-      // EDIT BUTTON
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn-retro btn-warning";
       btnEdit.style.cssText = "padding:2px 6px; font-size:7px; margin-right:4px;";
       btnEdit.textContent = "✏️ EDIT";
-      btnEdit.onclick = () => editMonster(m);
+      btnEdit.onclick = () => {
+        SoundFX.playClick();
+        editMonster(m);
+      };
 
-      // DELETE BUTTON
       const btnDelete = document.createElement("button");
       btnDelete.className = "btn-retro btn-danger";
       btnDelete.style.cssText = "padding:2px 6px; font-size:7px;";
       btnDelete.textContent = "🗑️ HAPUS";
-      btnDelete.onclick = () => deleteMonster(m);
+      btnDelete.onclick = () => {
+        SoundFX.playClick();
+        deleteMonster(m);
+      };
 
       btnGroup.appendChild(btnEdit);
       btnGroup.appendChild(btnDelete);
@@ -825,8 +931,6 @@
 
     document.getElementById("btnSaveMonster").textContent = "💾 UPDATE MONSTER";
     document.getElementById("btnCancelEditMonster").classList.remove("hidden");
-
-    // Scroll form into view
     document.getElementById("monsterFormTitle").scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -835,17 +939,45 @@
       state.customMonsters = state.customMonsters.filter(x => x.id !== m.id);
       state.ecoDex = state.ecoDex.filter(id => id !== m.id);
 
-      // If active monster was deleted, fallback to default slime
       if (state.player.activeMonster === m.id) {
         state.player.activeMonster = "slime_organik_01";
       }
 
       delete imageCache[m.id];
-
       saveState();
       renderAdminMonsterList();
       alert(`🗑️ Monster "${m.name}" berhasil dihapus.`);
     }
+  }
+
+  function renderAdminScanLogs() {
+    const list = document.getElementById("adminScanLogsList");
+    if (!list) return;
+    list.innerHTML = "";
+
+    const logs = (state.dailyScans && state.dailyScans.logs) ? state.dailyScans.logs : [];
+
+    if (logs.length === 0) {
+      list.innerHTML = `<p class="desc text-center">Belum ada log bukti foto scan hari ini.</p>`;
+      return;
+    }
+
+    logs.forEach((log) => {
+      const card = document.createElement("div");
+      card.className = "scan-log-card retro-box";
+
+      const photoHtml = log.photo ? `<img src="${log.photo}" class="scan-log-img" alt="Bukti Foto">` : `<div class="scan-log-img text-center">📷 NO PHOTO</div>`;
+
+      card.innerHTML = `
+        ${photoHtml}
+        <div class="scan-log-info">
+          <div><strong>#${log.count} - Kategori ${log.category}</strong></div>
+          <div class="scan-log-tier">${log.tierText}</div>
+          <div class="scan-log-time">📅 ${log.date} ${log.timestamp}</div>
+        </div>
+      `;
+      list.appendChild(card);
+    });
   }
 
   function setupAdminPanel() {
@@ -859,14 +991,21 @@
     const mImagePreviewContainer = document.getElementById("mImagePreviewContainer");
     const mImagePreviewCanvas = document.getElementById("mImagePreviewCanvas");
     const btnCancelEditMonster = document.getElementById("btnCancelEditMonster");
+    const btnClearLogs = document.getElementById("btnClearLogs");
+
+    const btnExportJson = document.getElementById("btnExportJson");
+    const btnImportJsonTrigger = document.getElementById("btnImportJsonTrigger");
+    const jsonFileInput = document.getElementById("jsonFileInput");
 
     btnAdminTrigger.onclick = () => {
+      SoundFX.playClick();
       adminPinInput.value = "";
       authError.classList.add("hidden");
       authModal.classList.remove("hidden");
     };
 
     btnAuthSubmit.onclick = () => {
+      SoundFX.playClick();
       const pin = adminPinInput.value.trim();
       if (pin === "admin123") {
         authModal.classList.add("hidden");
@@ -881,11 +1020,13 @@
     };
 
     btnAdminExit.onclick = () => {
+      SoundFX.playClick();
       adminModal.classList.add("hidden");
     };
 
     document.querySelectorAll(".admin-tabs .tab-btn").forEach(btn => {
       btn.onclick = () => {
+        SoundFX.playClick();
         document.querySelectorAll(".admin-tabs .tab-btn").forEach(b => b.classList.remove("active"));
         document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
 
@@ -901,7 +1042,68 @@
       };
     });
 
-    // Handle Uploaded Image Preview & Resizing to 32x32 Pixel Art Thumbnail
+    if (btnClearLogs) {
+      btnClearLogs.onclick = () => {
+        SoundFX.playClick();
+        if (confirm("⚠️ Yakin ingin menghapus seluruh log bukti foto scan hari ini?")) {
+          if (state.dailyScans) state.dailyScans.logs = [];
+          saveState();
+          renderAdminScanLogs();
+          alert("🗑️ Seluruh Log Audit Bukti Foto Berhasil Dihapus.");
+        }
+      };
+    }
+
+    // EXPORT JSON DATA BACKUP
+    if (btnExportJson) {
+      btnExportJson.onclick = () => {
+        SoundFX.playClick();
+        const dataStr = JSON.stringify(state, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `eco-rangers-backup-${QREngine.getTodayIsoDate()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      };
+    }
+
+    // IMPORT JSON DATA BACKUP
+    if (btnImportJsonTrigger && jsonFileInput) {
+      btnImportJsonTrigger.onclick = () => {
+        SoundFX.playClick();
+        jsonFileInput.click();
+      };
+
+      jsonFileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (!imported.player || !imported.inventory || !imported.dailyScans) {
+              alert("❌ Berkas JSON tidak valid! Pastikan format struktur Eco-Rangers sesuai.");
+              return;
+            }
+
+            state = imported;
+            saveState();
+            alert("✅ IMPOR DATA JSON BERHASIL! Seluruh state game telah diperbarui.");
+            location.reload();
+          } catch (err) {
+            alert("❌ Gagal membaca berkas JSON. Format tidak sesuai.");
+          }
+        };
+        reader.readAsText(file);
+      };
+    }
+
     mInputImage.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) {
@@ -932,11 +1134,13 @@
     };
 
     btnCancelEditMonster.onclick = () => {
+      SoundFX.playClick();
       resetMonsterForm();
     };
 
     // 1. Tab QR Code Generator
     document.getElementById("btnGenerateQr").onclick = () => {
+      SoundFX.playClick();
       const cat = document.getElementById("qrSelectCategory").value;
       const loc = document.getElementById("qrInputLocation").value;
       const display = document.getElementById("adminQrDisplay");
@@ -947,6 +1151,7 @@
 
     // 2. Tab Custom Monster Save / Update Form
     document.getElementById("btnSaveMonster").onclick = () => {
+      SoundFX.playClick();
       const name = document.getElementById("mInputName").value.trim();
       const type = document.getElementById("mInputType").value;
       const level = parseInt(document.getElementById("mInputLevel").value) || 1;
@@ -959,7 +1164,6 @@
       }
 
       if (editingMonsterId) {
-        // UPDATE EXISTING MONSTER
         const idx = state.customMonsters.findIndex(m => m.id === editingMonsterId);
         if (idx !== -1) {
           state.customMonsters[idx].name = name;
@@ -969,13 +1173,12 @@
           state.customMonsters[idx].color = color;
           if (currentCustomSpriteDataUrl) {
             state.customMonsters[idx].spriteDataUrl = currentCustomSpriteDataUrl;
-            delete imageCache[editingMonsterId]; // invalidate image cache
+            delete imageCache[editingMonsterId];
           }
 
           alert(`✅ Monster "${name}" Berhasil Di-update!`);
         }
       } else {
-        // CREATE NEW MONSTER
         const newId = `custom_monster_${Date.now()}`;
         const newMonster = {
           id: newId,
@@ -1002,6 +1205,7 @@
 
     // 3. Tab Quiz Bank
     document.getElementById("btnAddQuiz").onclick = () => {
+      SoundFX.playClick();
       const q = document.getElementById("qInputQuestion").value.trim();
       const o0 = document.getElementById("qInputOpt0").value.trim();
       const o1 = document.getElementById("qInputOpt1").value.trim();
@@ -1033,6 +1237,7 @@
 
     // 4. Tab Leaderboard Update
     document.getElementById("btnUpdateRank").onclick = () => {
+      SoundFX.playClick();
       const cName = document.getElementById("rInputClass").value.trim();
       const pts = parseInt(document.getElementById("rInputPoints").value) || 0;
 
@@ -1057,6 +1262,7 @@
 
     // 5. Tab Demo Suite
     document.getElementById("btnDemoSpawn").onclick = () => {
+      SoundFX.playClick();
       activeTab = "HUNT";
       spawnWildMonster();
       adminModal.classList.add("hidden");
@@ -1068,6 +1274,7 @@
     };
 
     document.getElementById("btnDemoResetScan").onclick = () => {
+      SoundFX.playClick();
       state.dailyScans = {
         date: QREngine.getTodayIsoDate(),
         count: 0,
@@ -1079,6 +1286,7 @@
     };
 
     document.getElementById("btnDemoResetAll").onclick = () => {
+      SoundFX.playClick();
       if (confirm("⚠️ Yakin reset semua data game ke inisial JSON?")) {
         localStorage.removeItem("ecoRangersData");
         loadState();
@@ -1086,35 +1294,6 @@
         location.reload();
       }
     };
-  }
-
-  function renderAdminScanLogs() {
-    const list = document.getElementById("adminScanLogsList");
-    list.innerHTML = "";
-
-    const logs = (state.dailyScans && state.dailyScans.logs) ? state.dailyScans.logs : [];
-
-    if (logs.length === 0) {
-      list.innerHTML = `<p class="desc text-center">Belum ada log bukti foto scan hari ini.</p>`;
-      return;
-    }
-
-    logs.forEach((log) => {
-      const card = document.createElement("div");
-      card.className = "scan-log-card retro-box";
-
-      const photoHtml = log.photo ? `<img src="${log.photo}" class="scan-log-img" alt="Bukti Foto">` : `<div class="scan-log-img text-center">📷 NO PHOTO</div>`;
-
-      card.innerHTML = `
-        ${photoHtml}
-        <div class="scan-log-info">
-          <div><strong>#${log.count} - Kategori ${log.category}</strong></div>
-          <div class="scan-log-tier">${log.tierText}</div>
-          <div class="scan-log-time">📅 ${log.date} ${log.timestamp}</div>
-        </div>
-      `;
-      list.appendChild(card);
-    });
   }
 
   function renderAdminQuizList() {
@@ -1129,6 +1308,7 @@
         <button class="btn-retro btn-danger" style="padding:2px 6px; font-size:7px;">HAPUS</button>
       `;
       li.querySelector("button").onclick = () => {
+        SoundFX.playClick();
         state.quizBank.splice(idx, 1);
         saveState();
         renderAdminQuizList();
@@ -1192,6 +1372,7 @@
     typeChar();
 
     btnStartGame.onclick = () => {
+      SoundFX.playLevelUp();
       state.hasSeenIntro = true;
       saveState();
       introModal.classList.add("hidden");
@@ -1224,6 +1405,7 @@
 
     document.querySelectorAll(".closeModal").forEach(btn => {
       btn.onclick = () => {
+        SoundFX.playClick();
         qrModal.classList.add("hidden");
         feedModal.classList.add("hidden");
         dexModal.classList.add("hidden");
@@ -1235,6 +1417,7 @@
 
     // 1. SCAN QR Button
     btnScan.onclick = () => {
+      SoundFX.playClick();
       setActiveNav(btnScan);
       activeTab = "SCAN";
       
@@ -1249,6 +1432,7 @@
 
     // Step 1 -> Take Photo Snapshot
     btnTakeTrashPhoto.onclick = () => {
+      SoundFX.playClick();
       currentWasteSnapshotUrl = QREngine.takeWasteSnapshot(videoWebcam, trashSnapshotCanvas);
 
       trashSnapshotPlaceholder.classList.add("hidden");
@@ -1261,6 +1445,7 @@
 
       QREngine.startScanner(videoWebcam, qrScanCanvas, qrStatus, (payload) => {
         QREngine.stopScanner();
+        SoundFX.playQrSuccess();
 
         const parsed = QREngine.parseQrPayload(payload);
         const antiCheat = QREngine.processDailyScanAntiCheat(state, currentWasteSnapshotUrl, parsed.category);
@@ -1279,6 +1464,7 @@
 
     // Step 2 -> Retake Photo
     btnRetakePhoto.onclick = () => {
+      SoundFX.playClick();
       QREngine.stopScanner();
       qrStep2Container.classList.add("hidden");
       qrStep1Container.classList.remove("hidden");
@@ -1286,6 +1472,7 @@
 
     // 2. FEED Button
     btnFeed.onclick = () => {
+      SoundFX.playClick();
       setActiveNav(btnFeed);
       activeTab = "FEED";
       renderFeedInventory();
@@ -1294,6 +1481,7 @@
 
     // 3. HUNT Button
     btnHunt.onclick = () => {
+      SoundFX.playClick();
       setActiveNav(btnHunt);
       activeTab = "HUNT";
       if (!wildMonster) {
@@ -1303,6 +1491,7 @@
 
     // 4. ECO-DEX Button
     btnDex.onclick = () => {
+      SoundFX.playClick();
       setActiveNav(btnDex);
       activeTab = "DEX";
       renderEcoDex();
@@ -1311,6 +1500,7 @@
 
     // 5. RANK Button
     btnRank.onclick = () => {
+      SoundFX.playClick();
       setActiveNav(btnRank);
       activeTab = "RANK";
       renderLeaderboard();

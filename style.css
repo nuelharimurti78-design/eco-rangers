@@ -354,6 +354,8 @@ html, body {
 
 .mt-10 { margin-top: 10px; }
 .mt-15 { margin-top: 15px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
 .text-center { text-align: center; }
 .hidden { display: none !important; }
 
@@ -868,6 +870,12 @@ html, body {
 
 .scan-log-time { color: #888; font-size: 7px; }
 .scan-log-tier { color: var(--color-green); font-weight: bold; }
+
+.form-actions-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
 
 .quiz-admin-list {
   list-style: none;

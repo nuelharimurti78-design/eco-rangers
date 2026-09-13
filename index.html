@@ -256,10 +256,10 @@
         <button id="btnAdminExit" class="btn-retro btn-danger">✖ KELUAR</button>
       </div>
 
-      <!-- Admin Tabs Navigation -->
+      <!-- Admin Tabs Navigation (6 Tabs) -->
       <div class="admin-tabs">
         <button class="tab-btn active" data-tab="tabQr">🔲 QR Generator</button>
-        <button class="tab-btn" data-tab="tabLogs">📋 Log Bukti Scan</button>
+        <button class="tab-btn" data-tab="tabLogs">📜 Log Bukti Sampah</button>
         <button class="tab-btn" data-tab="tabMonster">👾 Input/Edit Monster</button>
         <button class="tab-btn" data-tab="tabQuiz">❓ Bank Soal</button>
         <button class="tab-btn" data-tab="tabRank">🏆 Leaderboard</button>
@@ -289,10 +289,11 @@
         </div>
       </div>
 
-      <!-- Tab Content 1.5: Scan Proof Logs -->
+      <!-- Tab Content 1.5: Audit Log Bukti Foto Sampah -->
       <div id="tabLogs" class="tab-content">
-        <h3>📋 LOG BUKTI FOTO SAMPAH & SCAN HARIAN</h3>
+        <h3>📜 AUDIT LOG BUKTI FOTO SAMPAH & SCAN HARIAN</h3>
         <p class="desc">Rekapitulasi bukti fisik foto pemilahan sampah dan status anti-cheat yang tersimpan di localStorage:</p>
+        <button id="btnClearLogs" class="btn-retro btn-danger mb-10" style="padding:4px 8px; font-size:7px;">🗑️ HAPUS ALL LOG HARIAN</button>
         <div id="adminScanLogsList" class="scan-logs-grid">
           <!-- Dynamically populated scan logs -->
         </div>
@@ -397,9 +398,21 @@
         <div id="adminRankTable" class="admin-rank-table"></div>
       </div>
 
-      <!-- Tab Content 5: Presentation & Demo Suite (Krenova Test Suite) -->
+      <!-- Tab Content 5: Presentation, Backup JSON & Demo Suite -->
       <div id="tabDemo" class="tab-content">
-        <h3>⚡ KRENOVA PRESENTATION & DEMO SUITE</h3>
+        <h3>⚡ KRENOVA PRESENTATION & BACKUP SUITE</h3>
+        
+        <!-- EXPORT / IMPORT JSON SECTION -->
+        <div class="backup-section retro-box mb-15">
+          <h4 style="color:var(--color-yellow); font-size:9px; margin-bottom:8px;">📦 BACKUP & RESTORE DATA JSON</h4>
+          <p class="desc">Ekspor seluruh state data game ke berkas JSON atau impor berkas cadangan:</p>
+          <div class="backup-buttons-row" style="display:flex; gap:8px;">
+            <button id="btnExportJson" class="btn-retro btn-success" style="flex:1; padding:8px; font-size:8px;">💾 EXPORT DATA JSON</button>
+            <button id="btnImportJsonTrigger" class="btn-retro btn-primary" style="flex:1; padding:8px; font-size:8px;">📥 IMPORT DATA JSON</button>
+            <input type="file" id="jsonFileInput" class="hidden" accept=".json">
+          </div>
+        </div>
+
         <p class="desc">Tombol pintas pengujian langsung untuk presentasi juri lomba Krenova & Adiwiyata:</p>
         <div class="demo-suite-grid">
           <button id="btnDemoSpawn" class="btn-retro btn-demo btn-warning">
