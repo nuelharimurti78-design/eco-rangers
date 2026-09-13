@@ -63,13 +63,24 @@
     let isOnline = false;
     let currentConfig = null;
 
+    const DEFAULT_CONFIG = {
+      apiKey: "AIzaSyDwmXEIgyfYyehbJcI0aEtG5hUBUuVsGV4",
+      authDomain: "eco-rangers-c65c9.firebaseapp.com",
+      databaseURL: "https://eco-rangers-c65c9-default-rtdb.firebaseio.com",
+      projectId: "eco-rangers-c65c9",
+      storageBucket: "eco-rangers-c65c9.firebasestorage.app",
+      messagingSenderId: "342986042771",
+      appId: "1:342986042771:web:fb92314fb0f67f69598c66",
+      measurementId: "G-V66J3YSCT0"
+    };
+
     function getConfigFromStorage() {
       const raw = localStorage.getItem("ecoRangersFirebaseConfig");
-      if (!raw) return null;
+      if (!raw) return DEFAULT_CONFIG;
       try {
         return JSON.parse(raw);
       } catch (e) {
-        return null;
+        return DEFAULT_CONFIG;
       }
     }
 
